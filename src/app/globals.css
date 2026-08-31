@@ -44,30 +44,15 @@
   background-attachment: fixed;
 }
 
-/* Light spatial variant: multi-hue mesh — peach, mint, lavender, sky */
+/* Light spatial variant: soft sage, warm cream, gentle gray */
 body {
   background:
-    radial-gradient(55rem 38rem at 85% -12%, rgba(255, 196, 150, 0.4), transparent 60%),
-    radial-gradient(46rem 34rem at -8% 12%, rgba(150, 205, 175, 0.42), transparent 62%),
-    radial-gradient(42rem 40rem at 108% 55%, rgba(186, 170, 235, 0.32), transparent 65%),
-    radial-gradient(40rem 34rem at 30% 108%, rgba(150, 195, 235, 0.35), transparent 65%),
-    radial-gradient(30rem 26rem at 55% 40%, rgba(255, 235, 210, 0.5), transparent 70%),
-    #eef1ee;
+    radial-gradient(60rem 40rem at 85% -10%, rgba(212, 175, 130, 0.25), transparent 60%),
+    radial-gradient(50rem 36rem at -10% 20%, rgba(140, 190, 160, 0.30), transparent 60%),
+    radial-gradient(44rem 44rem at 70% 110%, rgba(120, 175, 145, 0.25), transparent 65%),
+    radial-gradient(30rem 30rem at 40% 45%, rgba(220, 225, 220, 0.5), transparent 70%),
+    #f2f4f1;
   background-attachment: fixed;
-}
-
-/* Film grain: kills gradient banding, adds tactile quality */
-body::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-  opacity: 0.035;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
-}
-.dark body::before {
-  opacity: 0.05;
 }
 
 /* Frosted glass panels (dark spatial theme) */
@@ -81,36 +66,20 @@ body::before {
 
 /* Data tables / dense content: more opaque layer for readability */
 table {
-  background: rgba(255, 255, 255, 0.5);
+  background: rgba(255, 255, 255, 0.6);
   border-radius: 12px;
-}
-
-/* Form controls: tinted glass (light) */
-body:not(.dark) input,
-body:not(.dark) select,
-body:not(.dark) textarea {
-  background: rgba(255, 255, 255, 0.45);
-  -webkit-backdrop-filter: blur(12px);
-  backdrop-filter: blur(12px);
-}
-body:not(.dark) input:focus,
-body:not(.dark) select:focus,
-body:not(.dark) textarea:focus {
-  background: rgba(255, 255, 255, 0.8);
 }
 .dark table {
   background: rgba(0, 0, 0, 0.25);
 }
 
-/* Cards: tinted frosted glass (light spatial) — picks up canvas hues */
+/* Cards: frosted white glass (light spatial) */
 .soft {
-  background: linear-gradient(160deg, rgba(255, 255, 255, 0.62), rgba(255, 255, 255, 0.38));
-  -webkit-backdrop-filter: blur(24px) saturate(170%);
-  backdrop-filter: blur(24px) saturate(170%);
-  border: 1px solid rgba(255, 255, 255, 0.7);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.85),
-    0 8px 32px rgba(50, 70, 60, 0.1);
+  background: rgba(255, 255, 255, 0.55);
+  -webkit-backdrop-filter: blur(24px) saturate(140%);
+  backdrop-filter: blur(24px) saturate(140%);
+  border: 1px solid rgba(255, 255, 255, 0.65);
+  box-shadow: 0 8px 32px rgba(30, 50, 40, 0.08);
 }
 /* Buttons: glass pill in spatial theme */
 .dark .btn-neon {
@@ -125,22 +94,17 @@ body:not(.dark) textarea:focus {
 }
 
 
-/* Pill primary buttons — gradient with colored glow (light) */
+/* Pill primary buttons — Apple's 980px radius */
 .btn-neon {
-  background: linear-gradient(180deg, #3b8bff, #0071e3);
+  background: var(--accent);
   color: #fff;
   font-weight: 500;
   border-radius: 980px;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.35),
-    0 4px 14px rgba(0, 113, 227, 0.35);
+  box-shadow: none;
   transition: background 120ms cubic-bezier(0.25, 0.1, 0.25, 1), transform 120ms cubic-bezier(0.25, 0.1, 0.25, 1), opacity 120ms;
 }
 .btn-neon:hover {
-  background: linear-gradient(180deg, #4a94ff, #0a7cf0);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.35),
-    0 6px 20px rgba(0, 113, 227, 0.45);
+  background: var(--accent-hover);
 }
 /* Press feedback is instant (no transition on the way down); smooth on release */
 .btn-neon:active {
@@ -162,34 +126,14 @@ button:active {
   transition-duration: 0ms;
 }
 
-/* Hover lift — spatial focus response */
+/* Hover lift — subtle, Apple-style (small distance, soft shadow) */
 .card-lift {
   transition: transform 300ms cubic-bezier(0.25, 0.1, 0.25, 1), box-shadow 300ms cubic-bezier(0.25, 0.1, 0.25, 1), border-color 300ms;
 }
 .card-lift:hover {
   transform: scale(1.02);
-  border-color: rgba(255, 255, 255, 0.95);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.9),
-    0 12px 40px rgba(50, 70, 60, 0.16);
-}
-
-/* Duotone tint per dashboard stat card (light spatial) — mint, peach, lavender, sky */
-body:not(.dark) .card-lift:nth-of-type(1) {
-  background: linear-gradient(160deg, rgba(214, 240, 222, 0.72), rgba(255, 255, 255, 0.4));
-  border-color: rgba(255, 255, 255, 0.8);
-}
-body:not(.dark) .card-lift:nth-of-type(2) {
-  background: linear-gradient(160deg, rgba(255, 226, 200, 0.68), rgba(255, 255, 255, 0.4));
-  border-color: rgba(255, 255, 255, 0.8);
-}
-body:not(.dark) .card-lift:nth-of-type(3) {
-  background: linear-gradient(160deg, rgba(228, 218, 248, 0.66), rgba(255, 255, 255, 0.4));
-  border-color: rgba(255, 255, 255, 0.8);
-}
-body:not(.dark) .card-lift:nth-of-type(4) {
-  background: linear-gradient(160deg, rgba(204, 228, 248, 0.68), rgba(255, 255, 255, 0.4));
-  border-color: rgba(255, 255, 255, 0.8);
+  border-color: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 8px 32px rgba(30, 50, 40, 0.14);
 }
 .dark .card-lift:hover {
   transform: scale(1.02);
