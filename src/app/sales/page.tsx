@@ -2,14 +2,15 @@ import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { getSettings } from "@/lib/settings";
+import SaleForm from "./sale-form";
 
-type Store = { id: string; name: string };
+type Store = { id: string; name: string; categories: string[] | null };
 type Variant = {
   id: string;
   sku: string;
   size_ml: number;
   retail_price: number;
-  products: { name: string } | null;
+  products: { name: string; category: string | null } | null;
 };
 type Sale = {
   id: string;
@@ -81,10 +82,10 @@ export default async function SalesPage() {
 
   const [{ data: stores }, { data: variants }, { data: sales }] =
     await Promise.all([
-      supabase.from("stores").select("id, name").order("name"),
+      supabase.from("stores").select("id, name, categories").order("name"),
       supabase
         .from("variant_public_view")
-        .select("id, sku, size_ml, retail_price, products(name)")
+        .select("id, sku, size_ml, retail_price, products(name, category)")
         .order("sku")
         .limit(200),
       supabase
@@ -94,9 +95,6 @@ export default async function SalesPage() {
         .limit(20),
     ]);
 
-  const inputCls =
-    "rounded-[10px] border border-black/10 px-3 py-2 text-sm dark:border-neutral-700 dark:bg-transparent";
-
   return (
     <div className="mx-auto max-w-5xl space-y-8 p-8">
       <section className="space-y-4">
@@ -105,57 +103,13 @@ export default async function SalesPage() {
           Stock is deducted automatically via the{" "}
           <code>deduct_sale_stock</code> database trigger.
         </p>
-        <form
+        <SaleForm
           action={recordSale}
-          className="grid gap-3 rounded-2xl border border-neutral-200 bg-white dark:bg-transparent p-4 sm:grid-cols-2 dark:border-neutral-800"
-        >
-          <select name="store_id" required className={inputCls}>
-            <option value="">Select store *</option>
-            {(stores ?? []).map((s: Store) => (
-              <option key={s.id} value={s.id}>
-                {s.name}
-              </option>
-            ))}
-          </select>
-          <select name="variant_id" required className={inputCls}>
-            <option value="">Select product variant *</option>
-            {((variants ?? []) as unknown as Variant[]).map((v) => (
-              <option key={v.id} value={v.id}>
-                {v.products?.name} — {v.sku} ({v.size_ml}
-                {sizeUnit}) — {currencySymbol}
-                {Number(v.retail_price).toFixed(2)}
-              </option>
-            ))}
-          </select>
-          <input
-            name="quantity"
-            type="number"
-            min="1"
-            required
-            placeholder="Quantity *"
-            className={inputCls}
-          />
-          <select name="payment_method" className={inputCls}>
-            <option value="cash">Cash</option>
-            <option value="gcash">GCash</option>
-            <option value="card">Card</option>
-            <option value="bank_transfer">Bank transfer</option>
-          </select>
-          <input
-            name="discount"
-            type="number"
-            step="0.01"
-            min="0"
-            placeholder="Discount (optional)"
-            className={inputCls}
-          />
-          <button
-            type="submit"
-            className="rounded-2xl btn-neon px-4 py-2 text-sm font-medium transition-opacity hover:opacity-80 sm:col-span-2"
-          >
-            Record sale
-          </button>
-        </form>
+          stores={(stores ?? []) as unknown as Store[]}
+          variants={(variants ?? []) as unknown as Variant[]}
+          sizeUnit={sizeUnit}
+          currencySymbol={currencySymbol}
+        />
       </section>
 
       <section className="space-y-3">
