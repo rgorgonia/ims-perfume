@@ -33,17 +33,20 @@ export async function middleware(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // Redirect unauthenticated users away from the home/dashboard to /login
-  const isLoginPage = request.nextUrl.pathname.startsWith("/login");
+  // Public auth pages reachable without a session
+  const isPublicAuthPage =
+    request.nextUrl.pathname.startsWith("/login") ||
+    request.nextUrl.pathname.startsWith("/forgot-password") ||
+    request.nextUrl.pathname.startsWith("/reset-password");
 
-  if (!user && !isLoginPage) {
+  if (!user && !isPublicAuthPage) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     return NextResponse.redirect(url);
   }
 
-  // Redirect authenticated users away from /login to the dashboard
-  if (user && isLoginPage) {
+  // Redirect authenticated users away from the login page to the dashboard
+  if (user && request.nextUrl.pathname.startsWith("/login")) {
     const url = request.nextUrl.clone();
     url.pathname = "/";
     return NextResponse.redirect(url);

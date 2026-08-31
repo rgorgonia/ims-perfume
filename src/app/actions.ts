@@ -10,7 +10,6 @@ export async function signOutAction() {
   redirect("/login");
 }
 
-/** Update the signed-in user's own profile name (RLS-scoped to self). */
 export async function updateProfileAction(formData: FormData) {
   const supabase = await createClient();
   const {
