@@ -20,10 +20,11 @@ export const metadata: Metadata = {
 };
 
 // visionOS dark spatial theme is the default; "light" is opt-in via the toggle.
+// Key is versioned ("theme.v2") so new design defaults apply over old saved prefs.
 const themeInitScript = `
 (function () {
   try {
-    if (localStorage.getItem("theme") === "light") {
+    if (localStorage.getItem("ims-theme.v2") === "light") {
       document.documentElement.classList.remove("dark");
     } else {
       document.documentElement.classList.add("dark");

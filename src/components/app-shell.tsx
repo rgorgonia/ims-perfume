@@ -42,7 +42,7 @@ export default function AppShell({
     const next = !dark;
     setDark(next);
     document.documentElement.classList.toggle("dark", next);
-    localStorage.setItem("theme", next ? "dark" : "light");
+    localStorage.setItem("ims-theme.v2", next ? "dark" : "light");
   }
 
   const items = NAV_ITEMS.filter((i) => !i.admin || isAdmin);
