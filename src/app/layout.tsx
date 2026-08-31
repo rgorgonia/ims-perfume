@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import Link from "next/link";
 import "./globals.css";
 import { getSession } from "@/lib/auth";
+import ThemeToggle from "@/components/theme-toggle";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -27,6 +28,15 @@ const navLinks = [
   { href: "/users", label: "Users" },
 ];
 
+const themeInitScript = `
+(function () {
+  try {
+    var t = localStorage.getItem("theme");
+    if (t === "dark") document.documentElement.classList.add("dark");
+  } catch (e) {}
+})();
+`;
+
 export default async function RootLayout({
   children,
 }: Readonly<{
@@ -35,7 +45,10 @@ export default async function RootLayout({
   const session = await getSession();
 
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
+      </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
@@ -55,6 +68,7 @@ export default async function RootLayout({
               <span className="ml-auto text-neutral-500">
                 {session.user.email}
               </span>
+              <ThemeToggle />
             </div>
           </nav>
         )}
