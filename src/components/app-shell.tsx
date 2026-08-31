@@ -83,7 +83,7 @@ export default function AppShell({
                 {active && (
                   <motion.span
                     layoutId="nav-pill"
-                    transition={{ type: "spring", stiffness: 400, damping: 32 }}
+                    transition={{ type: "spring", stiffness: 700, damping: 42 }}
                     className="absolute inset-0 rounded-2xl bg-blue-50 ring-1 ring-blue-200 dark:bg-gradient-to-r dark:from-[#a855f7]/25 dark:to-[#06b6d4]/20 dark:ring-[#a855f7]/40"
                   />
                 )}
@@ -139,7 +139,7 @@ export default function AppShell({
                 {active && (
                   <motion.span
                     layoutId="nav-pill-mobile"
-                    transition={{ type: "spring", stiffness: 400, damping: 32 }}
+                    transition={{ type: "spring", stiffness: 700, damping: 42 }}
                     className="absolute inset-x-1 top-1 bottom-1 rounded-2xl bg-blue-50 ring-1 ring-blue-200 dark:bg-gradient-to-r dark:from-[#a855f7]/25 dark:to-[#06b6d4]/20 dark:ring-[#a855f7]/40"
                   />
                 )}
