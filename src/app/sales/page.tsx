@@ -1,6 +1,7 @@
 import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
+import { getSettings } from "@/lib/settings";
 
 type Store = { id: string; name: string };
 type Variant = {
@@ -74,6 +75,7 @@ async function recordSale(formData: FormData) {
 
 
 export default async function SalesPage() {
+  const { currencySymbol, sizeUnit } = await getSettings();
   const session = await requireUser();
   const supabase = await createClient();
 
@@ -119,7 +121,8 @@ export default async function SalesPage() {
             <option value="">Select product variant *</option>
             {((variants ?? []) as unknown as Variant[]).map((v) => (
               <option key={v.id} value={v.id}>
-                {v.products?.name} — {v.sku} ({v.size_ml}ml) — ₱
+                {v.products?.name} — {v.sku} ({v.size_ml}
+                {sizeUnit}) — {currencySymbol}
                 {Number(v.retail_price).toFixed(2)}
               </option>
             ))}
@@ -178,7 +181,7 @@ export default async function SalesPage() {
                     {s.payment_method.replace("_", " ")}
                   </td>
                   <td className="px-4 py-2 text-right">
-                    ₱{Number(s.total).toFixed(2)}
+                    {currencySymbol}{Number(s.total).toFixed(2)}
                   </td>
                 </tr>
               ))}

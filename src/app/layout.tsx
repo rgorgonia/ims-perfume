@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { getSession } from "@/lib/auth";
+import { getSettings } from "@/lib/settings";
 import AppShell from "@/components/app-shell";
 
 const geistSans = Geist({
@@ -14,10 +15,13 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-export const metadata: Metadata = {
-  title: "Perfume IMS",
-  description: "Multi-store inventory management system for your perfume business.",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const { businessName } = await getSettings();
+  return {
+    title: `${businessName} — IMS`,
+    description: `Multi-store inventory management system for ${businessName}.`,
+  };
+}
 
 // visionOS dark spatial theme is the default; "light" is opt-in via the toggle.
 // Key is versioned ("theme.v2") so new design defaults apply over old saved prefs.
@@ -41,6 +45,7 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const session = await getSession();
+  const settings = await getSettings();
 
   return (
     <html lang="en" suppressHydrationWarning>
@@ -51,7 +56,11 @@ export default async function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         {session ? (
-          <AppShell email={session.user.email} isAdmin={session.profile?.role === "system_admin"}>
+          <AppShell
+            email={session.user.email}
+            isAdmin={session.profile?.role === "system_admin"}
+            businessName={settings.businessName}
+          >
             {children}
           </AppShell>
         ) : (

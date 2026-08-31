@@ -6,16 +6,20 @@ import { animate, motion, useMotionValue, useTransform } from "framer-motion";
 /** Counts up from 0 to `value` with peso formatting. */
 export default function Ticker({
   value,
+  currencySymbol = "₱",
+  currencyLocale = "en-PH",
   className,
 }: {
   value: number;
+  currencySymbol?: string;
+  currencyLocale?: string;
   className?: string;
 }) {
   const mv = useMotionValue(0);
   const text = useTransform(
     mv,
     (v) =>
-      `₱${v.toLocaleString("en-PH", { maximumFractionDigits: 2 })}`
+      `${currencySymbol}${v.toLocaleString(currencyLocale, { maximumFractionDigits: 2 })}`
   );
 
   useEffect(() => {

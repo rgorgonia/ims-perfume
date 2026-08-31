@@ -3,6 +3,7 @@ import { revalidatePath } from "next/cache";
 import { notFound } from "next/navigation";
 import { requireUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
+import { getSettings, formatMoney } from "@/lib/settings";
 
 type Variant = {
   id: string;
@@ -99,6 +100,13 @@ export default async function ProductPage({
   const { id } = await params;
   await requireUser();
   const supabase = await createClient();
+  const {
+    currencySymbol,
+    currencyLocale,
+    sizeUnit,
+    perfumeFeatures,
+  } = await getSettings();
+  const money = (n: number) => formatMoney(n, currencySymbol, currencyLocale);
 
   const { data: product } = await supabase
     .from("products")
@@ -142,7 +150,9 @@ export default async function ProductPage({
           {product.brand ? ` — ${product.brand}` : ""}
         </h1>
         <p className="text-sm text-neutral-600 dark:text-neutral-400">
-          {product.concentration} · Retail ₱{Number(product.retail_price).toFixed(2)}
+          {perfumeFeatures && product.concentration ? `${product.concentration} · ` : ""}
+          {product.category ? `${product.category} · ` : ""}
+          Retail {money(Number(product.retail_price))}
         </p>
       </header>
 
@@ -152,16 +162,16 @@ export default async function ProductPage({
           {variantList.map((v) => (
             <li key={v.id} className="flex justify-between">
               <span>
-                {v.sku} — {v.size_ml}ml {v.variant_type}
+                {v.sku} — {v.size_ml}{sizeUnit} {v.variant_type}
               </span>
-              <span>₱{Number(v.retail_price).toFixed(2)}</span>
+              <span>{money(Number(v.retail_price))}</span>
             </li>
           ))}
         </ul>
         <form action={addVariant} className="grid gap-3 rounded-2xl border border-neutral-200 bg-white dark:bg-transparent p-4 sm:grid-cols-3 dark:border-neutral-800">
           <input type="hidden" name="product_id" value={id} />
           <input name="sku" required placeholder="SKU *" className={inputCls} />
-          <input name="size_ml" required type="number" min="1" placeholder="Size (ml) *" className={inputCls} />
+          <input name="size_ml" required type="number" min="1" placeholder={`Size (${sizeUnit}) *`} className={inputCls} />
           <select name="variant_type" className={inputCls}>
             <option value="retail">Retail</option>
             <option value="tester">Tester</option>
@@ -176,6 +186,7 @@ export default async function ProductPage({
         </form>
       </section>
 
+      {perfumeFeatures && (
       <section className="space-y-3">
         <h2 className="text-lg font-semibold">Scent profile</h2>
         <div className="grid gap-3 sm:grid-cols-3">
@@ -216,6 +227,7 @@ export default async function ProductPage({
           </button>
         </form>
       </section>
+      )}
 
       <section className="space-y-3">
         <h2 className="text-lg font-semibold">Batches / lots</h2>

@@ -48,10 +48,12 @@ function isActive(pathname: string, href: string) {
 export default function AppShell({
   email,
   isAdmin,
+  businessName,
   children,
 }: {
   email: string;
   isAdmin: boolean;
+  businessName: string;
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
@@ -84,10 +86,10 @@ export default function AppShell({
       <aside className="fixed inset-y-0 left-0 z-40 hidden w-64 flex-col gap-4 border-r border-black/[0.08] bg-white/70 px-4 py-6 backdrop-blur-2xl backdrop-saturate-150 md:flex md:inset-y-4 md:left-4 md:rounded-[28px] md:border md:border-white/60 md:shadow-[0_8px_32px_rgba(30,50,40,0.1)] md:dark:inset-y-4 md:dark:left-4 md:dark:rounded-[28px] md:dark:border md:dark:border-white/15 md:dark:bg-white/5 md:dark:shadow-[0_8px_32px_rgba(0,0,0,0.4)]">
         <div className="flex items-center gap-2.5 px-2">
           <span className="flex h-9 w-9 items-center justify-center rounded-[10px] bg-neutral-900 font-semibold text-white dark:bg-white dark:text-neutral-900">
-            P
+            {(businessName || "I").trim().charAt(0).toUpperCase()}
           </span>
           <span className="text-[17px] font-semibold tracking-tight text-neutral-900 dark:text-white">
-            Perfume IMS
+            {businessName}
           </span>
         </div>
         <div className="px-2">
@@ -148,7 +150,7 @@ export default function AppShell({
         <span className="flex h-9 w-9 items-center justify-center rounded-full bg-neutral-900 text-xs font-semibold text-white dark:bg-white dark:text-neutral-900">
           {initials}
         </span>
-        <span className="flex-1 text-[17px] font-semibold tracking-tight text-neutral-900 dark:text-white">Perfume IMS</span>
+        <span className="flex-1 text-[17px] font-semibold tracking-tight text-neutral-900 dark:text-white">{businessName}</span>
         <button
           onClick={toggleTheme}
           aria-label="Toggle theme"

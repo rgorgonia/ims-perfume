@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { requireUser } from "@/lib/auth";
+import { getSettings, formatMoney } from "@/lib/settings";
 import FadeIn from "@/components/fade-in";
 import Ticker from "@/components/ticker";
 
@@ -22,13 +23,12 @@ type Sale = {
   stores: { name: string } | null;
 };
 
-const peso = (n: number) =>
-  `₱${Number(n ?? 0).toLocaleString("en-PH", { maximumFractionDigits: 2 })}`;
-
 export default async function Dashboard() {
   const session = await requireUser();
   const supabase = await createClient();
   const isAdmin = session.profile?.role === "system_admin";
+  const { currencySymbol, currencyLocale } = await getSettings();
+  const peso = (n: number) => formatMoney(n, currencySymbol, currencyLocale);
 
   const { data: stores } = await supabase
     .from("stores")
@@ -126,7 +126,7 @@ export default async function Dashboard() {
       <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <div className={statCls}>
           <p className="text-xs text-neutral-500">Revenue (30d)</p>
-          <p className="text-xl font-bold text-neutral-900 dark:text-white"><Ticker value={totalRevenue} /></p>
+          <p className="text-xl font-bold text-neutral-900 dark:text-white"><Ticker value={totalRevenue} currencySymbol={currencySymbol} currencyLocale={currencyLocale} /></p>
         </div>
         <div className={statCls}>
           <p className="text-xs text-neutral-500">Gross profit (30d)</p>

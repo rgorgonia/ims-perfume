@@ -1,6 +1,7 @@
 import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
+import { getSettings, formatMoney } from "@/lib/settings";
 
 type Entry = {
   id: string;
@@ -55,8 +56,8 @@ export default async function CapitalPage() {
   ]);
 
   const balance = (entries ?? []).reduce((a, e) => a + Number(e.amount), 0);
-  const peso = (n: number) =>
-    `₱${Number(n).toLocaleString("en-PH", { maximumFractionDigits: 2 })}`;
+  const { currencySymbol, currencyLocale } = await getSettings();
+  const peso = (n: number) => formatMoney(n, currencySymbol, currencyLocale);
 
   const inputCls =
     "rounded-[10px] border border-black/10 px-3 py-2 text-sm dark:border-neutral-700 dark:bg-transparent";

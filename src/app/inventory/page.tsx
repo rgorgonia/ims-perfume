@@ -1,6 +1,7 @@
 import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
+import { getSettings } from "@/lib/settings";
 
 type Store = { id: string; name: string };
 type Variant = {
@@ -82,6 +83,7 @@ async function recordMovement(formData: FormData) {
 export default async function InventoryPage() {
   const session = await requireUser();
   const isAdmin = session.profile?.role === "system_admin";
+  const { sizeUnit } = await getSettings();
   const supabase = await createClient();
 
   const [{ data: stores }, { data: variants }, { data: levels }] =
@@ -138,7 +140,8 @@ export default async function InventoryPage() {
             <option value="">Select variant *</option>
             {((variants ?? []) as unknown as Variant[]).map((v) => (
               <option key={v.id} value={v.id}>
-                {v.products?.name} — {v.sku} ({v.size_ml}ml)
+                {v.products?.name} — {v.sku} ({v.size_ml}
+                {sizeUnit})
               </option>
             ))}
           </select>

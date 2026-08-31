@@ -1,8 +1,12 @@
 import { requireUser } from "@/lib/auth";
+import { getSettings } from "@/lib/settings";
 import SettingsForms from "./settings-forms";
+import SystemSettings from "./system-settings";
 
 export default async function SettingsPage() {
   const { user, profile } = await requireUser();
+  const isAdmin = profile?.role === "system_admin";
+  const s = await getSettings();
 
   return (
     <div className="space-y-6">
@@ -12,11 +16,14 @@ export default async function SettingsPage() {
           Manage your account and preferences
         </p>
       </div>
-      <SettingsForms
-        email={user.email}
-        fullName={profile?.full_name ?? ""}
-        role={profile?.role ?? "store_manager"}
-      />
+      <div className="grid gap-6 lg:grid-cols-2">
+        <SettingsForms
+          email={user.email}
+          fullName={profile?.full_name ?? ""}
+          role={profile?.role ?? "store_manager"}
+        />
+        {isAdmin && <SystemSettings s={s} />}
+      </div>
     </div>
   );
 }

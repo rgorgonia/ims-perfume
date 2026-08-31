@@ -2,13 +2,15 @@ import Link from "next/link";
 import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
+import { getSettings, formatMoney } from "@/lib/settings";
 
 type Variant = { sku: string; size_ml: number; retail_price: number };
 type Product = {
   id: string;
   name: string;
   brand: string | null;
-  concentration: string;
+  concentration: string | null;
+  category: string | null;
   retail_price: number;
   is_active: boolean;
   product_variants: Variant[];
@@ -21,7 +23,8 @@ async function createProduct(formData: FormData) {
 
   const name = String(formData.get("name") ?? "").trim();
   const brand = String(formData.get("brand") ?? "").trim();
-  const concentration = String(formData.get("concentration") ?? "EDP");
+  const category = String(formData.get("category") ?? "").trim();
+  const concentration = String(formData.get("concentration") ?? "").trim();
   const retailPrice = Number(formData.get("retail_price") ?? 0);
   const sizeMl = Number(formData.get("size_ml") ?? 0);
   const sku = String(formData.get("sku") ?? "").trim();
@@ -35,7 +38,8 @@ async function createProduct(formData: FormData) {
     .insert({
       name,
       brand: brand || null,
-      concentration,
+      category: category || null,
+      ...(concentration ? { concentration } : {}),
       cost_price: costPrice,
       retail_price: retailPrice,
     })
@@ -58,11 +62,19 @@ export default async function ProductsPage() {
   const session = await requireUser();
   const isAdmin = session.profile?.role === "system_admin";
   const supabase = await createClient();
+  const {
+    currencySymbol,
+    currencyLocale,
+    sizeUnit,
+    categories,
+    perfumeFeatures,
+  } = await getSettings();
+  const money = (n: number) => formatMoney(n, currencySymbol, currencyLocale);
 
   const { data: products } = await supabase
     .from("products")
     .select(
-      "id, name, brand, concentration, retail_price, is_active, product_variants(sku, size_ml, retail_price)"
+      "id, name, brand, concentration, category, retail_price, is_active, product_variants(sku, size_ml, retail_price)"
     )
     .order("name");
 
@@ -79,13 +91,22 @@ export default async function ProductsPage() {
         >
           <input name="name" required placeholder="Product name *" className={inputCls} />
           <input name="brand" placeholder="Brand" className={inputCls} />
-          <select name="concentration" className={inputCls}>
-            <option value="EDT">EDT</option>
-            <option value="EDP">EDP</option>
-            <option value="EXTRAIT">Extrait</option>
-            <option value="EDC">EDC</option>
-            <option value="OIL">Oil</option>
+          <select name="category" className={inputCls}>
+            {categories.map((c) => (
+              <option key={c} value={c}>
+                {c}
+              </option>
+            ))}
           </select>
+          {perfumeFeatures && (
+            <select name="concentration" className={inputCls}>
+              <option value="EDT">EDT</option>
+              <option value="EDP">EDP</option>
+              <option value="EXTRAIT">Extrait</option>
+              <option value="EDC">EDC</option>
+              <option value="OIL">Oil</option>
+            </select>
+          )}
           <input
             name="sku"
             required
@@ -97,7 +118,7 @@ export default async function ProductsPage() {
             required
             type="number"
             min="1"
-            placeholder="Size (ml) *"
+            placeholder={`Size (${sizeUnit}) *`}
             className={inputCls}
           />
           <input
@@ -135,7 +156,8 @@ export default async function ProductsPage() {
               <tr>
                 <th className="px-4 py-2">Product</th>
                 <th className="px-4 py-2">Brand</th>
-                <th className="px-4 py-2">Concentration</th>
+                <th className="px-4 py-2">Category</th>
+                {perfumeFeatures && <th className="px-4 py-2">Concentration</th>}
                 <th className="px-4 py-2">Variants</th>
                 <th className="px-4 py-2">Retail</th>
               </tr>
@@ -149,18 +171,19 @@ export default async function ProductsPage() {
                     </Link>
                   </td>
                   <td className="px-4 py-2">{p.brand ?? "—"}</td>
-                  <td className="px-4 py-2">{p.concentration}</td>
+                  <td className="px-4 py-2">{p.category ?? "—"}</td>
+                  {perfumeFeatures && <td className="px-4 py-2">{p.concentration ?? "—"}</td>}
                   <td className="px-4 py-2">
                     {(p.product_variants ?? [])
-                      .map((v) => `${v.sku} (${v.size_ml}ml)`)
+                      .map((v) => `${v.sku} (${v.size_ml}${sizeUnit})`)
                       .join(", ") || "—"}
                   </td>
-                  <td className="px-4 py-2">{Number(p.retail_price).toFixed(2)}</td>
+                  <td className="px-4 py-2">{money(Number(p.retail_price))}</td>
                 </tr>
               ))}
               {(products ?? []).length === 0 && (
                 <tr>
-                  <td colSpan={5} className="px-4 py-6 text-center text-neutral-500">
+                  <td colSpan={perfumeFeatures ? 6 : 5} className="px-4 py-6 text-center text-neutral-500">
                     No products yet.
                   </td>
                 </tr>
