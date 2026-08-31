@@ -19,17 +19,17 @@ export const metadata: Metadata = {
   description: "Multi-store inventory management system for your perfume business.",
 };
 
-// Light (SaaS) is the default theme; "dark" is opt-in via the toggle.
+// visionOS dark spatial theme is the default; "light" is opt-in via the toggle.
 const themeInitScript = `
 (function () {
   try {
-    if (localStorage.getItem("theme") === "dark") {
-      document.documentElement.classList.add("dark");
-    } else {
+    if (localStorage.getItem("theme") === "light") {
       document.documentElement.classList.remove("dark");
+    } else {
+      document.documentElement.classList.add("dark");
     }
   } catch (e) {
-    document.documentElement.classList.remove("dark");
+    document.documentElement.classList.add("dark");
   }
 })();
 `;

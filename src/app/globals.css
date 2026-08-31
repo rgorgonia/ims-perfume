@@ -24,13 +24,39 @@
 }
 
 .dark {
-  --background: #000000;        /* Apple true-black dark mode */
+  --background: #0b0f0d;          /* spatial dark canvas */
   --foreground: #f5f5f7;
-  --panel: #1c1c1e;             /* Apple dark elevated surface */
+  --panel: #1c1c1e;
   --border-soft: rgba(255, 255, 255, 0.1);
-  --accent: #0a84ff;            /* Apple dark-mode blue */
+  --accent: #0a84ff;
   --accent-hover: #409cff;
   --secondary-text: #86868b;
+}
+
+/* ===== visionOS spatial background: deep greens, dark grays, warm light ===== */
+.dark body {
+  background:
+    radial-gradient(60rem 40rem at 85% -10%, rgba(212, 165, 116, 0.14), transparent 60%),
+    radial-gradient(50rem 36rem at -10% 20%, rgba(52, 130, 96, 0.22), transparent 60%),
+    radial-gradient(44rem 44rem at 70% 110%, rgba(38, 92, 72, 0.20), transparent 65%),
+    radial-gradient(30rem 30rem at 40% 45%, rgba(90, 105, 98, 0.12), transparent 70%),
+    #0b0f0d;
+  background-attachment: fixed;
+}
+
+/* Frosted glass panels (dark spatial theme) */
+.dark .soft {
+  background: rgba(255, 255, 255, 0.05);
+  -webkit-backdrop-filter: blur(24px) saturate(140%);
+  backdrop-filter: blur(24px) saturate(140%);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+}
+
+/* Data tables / dense content: darker, more opaque for readability */
+.dark table {
+  background: rgba(0, 0, 0, 0.25);
+  border-radius: 12px;
 }
 
 /* Cards: white panels, hairline border, soft Apple shadow */
@@ -39,11 +65,18 @@
   border: 1px solid var(--border-soft);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04), 0 8px 24px rgba(0, 0, 0, 0.04);
 }
-.dark .soft {
-  background: var(--panel);
-  border-color: var(--border-soft);
-  box-shadow: none;
+/* Buttons: glass pill in spatial theme */
+.dark .btn-neon {
+  background: rgba(255, 255, 255, 0.12);
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.18);
 }
+.dark .btn-neon:hover {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
 
 /* Pill primary buttons — Apple's 980px radius */
 .btn-neon {
@@ -87,8 +120,9 @@ button:active {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08), 0 12px 32px rgba(0, 0, 0, 0.08);
 }
 .dark .card-lift:hover {
-  border-color: rgba(255, 255, 255, 0.15);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+  transform: scale(1.02);
+  border-color: rgba(255, 255, 255, 0.3);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), inset 0 0 0 1px rgba(255, 255, 255, 0.08);
 }
 
 
