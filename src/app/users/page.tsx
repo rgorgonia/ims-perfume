@@ -1,7 +1,7 @@
 import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
+import RegisterForm from "./register-form";
 
 type Store = { id: string; name: string };
 type ProfileRow = {
@@ -12,46 +12,6 @@ type ProfileRow = {
   store_id: string | null;
   stores: { name: string } | null;
 };
-
-async function registerUser(formData: FormData) {
-  "use server";
-  await requireAdmin();
-
-  const fullName = String(formData.get("full_name") ?? "").trim();
-  const email = String(formData.get("email") ?? "").trim().toLowerCase();
-  const role = String(formData.get("role") ?? "store_manager");
-  const storeId = String(formData.get("store_id") ?? "");
-
-  if (!fullName || !email) return;
-
-  // Pattern A (docs/ARCHITECTURE.md §4): temp password the admin never shows;
-  // staff sets their own via "Forgot password".
-  const tempPassword = crypto.randomUUID();
-
-  const admin = createAdminClient();
-  const { data, error } = await admin.auth.admin.createUser({
-    email,
-    password: tempPassword,
-    email_confirm: true,
-    user_metadata: { full_name: fullName },
-  });
-  if (error || !data.user) return;
-
-  const supabase = await createClient();
-  const { error: profileError } = await supabase.from("profiles").insert({
-    id: data.user.id,
-    full_name: fullName,
-    role,
-    store_id: role === "store_manager" && storeId ? storeId : null,
-  });
-  if (profileError) {
-    // Roll back the auth user so we don't orphan accounts
-    await admin.auth.admin.deleteUser(data.user.id);
-    return;
-  }
-
-  revalidatePath("/users");
-}
 
 
 export default async function UsersPage() {
@@ -71,51 +31,11 @@ export default async function UsersPage() {
       <section className="space-y-4">
         <h1 className="text-2xl font-bold">Register user</h1>
         <p className="text-sm text-neutral-600 dark:text-neutral-400">
-          A temporary password is generated server-side. The new user should
-          use &ldquo;Forgot password&rdquo; on the login page to set their own.
+          A one-time temporary password is generated and shown to you after
+          creation. Share it privately with the new user — they log in with it
+          and change it on their Settings page.
         </p>
-        <form
-          action={registerUser}
-          className="grid gap-3 rounded-2xl border border-neutral-200 bg-white dark:bg-transparent p-4 sm:grid-cols-2 dark:border-neutral-800"
-        >
-          <input
-            name="full_name"
-            required
-            placeholder="Full name"
-            className="rounded-[10px] border border-black/10 px-3 py-2 text-sm dark:border-neutral-700 dark:bg-transparent"
-          />
-          <input
-            name="email"
-            type="email"
-            required
-            placeholder="email@example.com"
-            className="rounded-[10px] border border-black/10 px-3 py-2 text-sm dark:border-neutral-700 dark:bg-transparent"
-          />
-          <select
-            name="role"
-            className="rounded-[10px] border border-black/10 px-3 py-2 text-sm dark:border-neutral-700 dark:bg-transparent"
-          >
-            <option value="store_manager">Store Manager</option>
-            <option value="system_admin">System Admin</option>
-          </select>
-          <select
-            name="store_id"
-            className="rounded-[10px] border border-black/10 px-3 py-2 text-sm dark:border-neutral-700 dark:bg-transparent"
-          >
-            <option value="">No store (admin)</option>
-            {(stores ?? []).map((s: Store) => (
-              <option key={s.id} value={s.id}>
-                {s.name}
-              </option>
-            ))}
-          </select>
-          <button
-            type="submit"
-            className="rounded-2xl btn-neon px-4 py-2 text-sm font-medium transition-opacity hover:opacity-80 sm:col-span-2"
-          >
-            Create user
-          </button>
-        </form>
+        <RegisterForm stores={stores ?? []} />
       </section>
 
       <section className="space-y-3">
