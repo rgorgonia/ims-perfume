@@ -148,7 +148,7 @@ export default async function ProductPage({
 
       <section className="space-y-3">
         <h2 className="text-lg font-semibold">Variants</h2>
-        <ul className="space-y-1 rounded-2xl border border-neutral-200 bg-white p-4 text-sm dark:border-neutral-800">
+        <ul className="space-y-1 rounded-2xl border border-neutral-200 bg-white dark:bg-transparent p-4 text-sm dark:border-neutral-800">
           {variantList.map((v) => (
             <li key={v.id} className="flex justify-between">
               <span>
@@ -158,7 +158,7 @@ export default async function ProductPage({
             </li>
           ))}
         </ul>
-        <form action={addVariant} className="grid gap-3 rounded-2xl border border-neutral-200 bg-white p-4 sm:grid-cols-3 dark:border-neutral-800">
+        <form action={addVariant} className="grid gap-3 rounded-2xl border border-neutral-200 bg-white dark:bg-transparent p-4 sm:grid-cols-3 dark:border-neutral-800">
           <input type="hidden" name="product_id" value={id} />
           <input name="sku" required placeholder="SKU *" className={inputCls} />
           <input name="size_ml" required type="number" min="1" placeholder="Size (ml) *" className={inputCls} />
@@ -180,7 +180,7 @@ export default async function ProductPage({
         <h2 className="text-lg font-semibold">Scent profile</h2>
         <div className="grid gap-3 sm:grid-cols-3">
           {noteTypes.map(([type, label]) => (
-            <div key={type} className="rounded-2xl border border-neutral-200 bg-white p-4 dark:border-neutral-800">
+            <div key={type} className="rounded-2xl border border-neutral-200 bg-white dark:bg-transparent p-4 dark:border-neutral-800">
               <p className="mb-2 text-sm font-medium">{label}</p>
               <div className="flex flex-wrap gap-2">
                 {noteList.filter((n) => n.note_type === type).map((n) => (
@@ -219,7 +219,7 @@ export default async function ProductPage({
 
       <section className="space-y-3">
         <h2 className="text-lg font-semibold">Batches / lots</h2>
-        <ul className="space-y-1 rounded-2xl border border-neutral-200 bg-white p-4 text-sm dark:border-neutral-800">
+        <ul className="space-y-1 rounded-2xl border border-neutral-200 bg-white dark:bg-transparent p-4 text-sm dark:border-neutral-800">
           {batchList.map((b) => (
             <li key={b.id} className="flex justify-between">
               <span>
@@ -237,7 +237,7 @@ export default async function ProductPage({
             <li className="text-center text-neutral-500">No batches recorded.</li>
           )}
         </ul>
-        <form action={addBatch} className="grid gap-3 rounded-2xl border border-neutral-200 bg-white p-4 sm:grid-cols-2 dark:border-neutral-800">
+        <form action={addBatch} className="grid gap-3 rounded-2xl border border-neutral-200 bg-white dark:bg-transparent p-4 sm:grid-cols-2 dark:border-neutral-800">
           <input type="hidden" name="product_id" value={id} />
           <select name="variant_id" required className={inputCls}>
             <option value="">Select variant *</option>

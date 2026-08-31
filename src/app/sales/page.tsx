@@ -105,7 +105,7 @@ export default async function SalesPage() {
         </p>
         <form
           action={recordSale}
-          className="grid gap-3 rounded-2xl border border-neutral-200 bg-white p-4 sm:grid-cols-2 dark:border-neutral-800"
+          className="grid gap-3 rounded-2xl border border-neutral-200 bg-white dark:bg-transparent p-4 sm:grid-cols-2 dark:border-neutral-800"
         >
           <select name="store_id" required className={inputCls}>
             <option value="">Select store *</option>
@@ -157,7 +157,7 @@ export default async function SalesPage() {
 
       <section className="space-y-3">
         <h2 className="text-xl font-semibold">Recent sales</h2>
-        <div className="overflow-x-auto rounded-2xl border border-neutral-200 bg-white dark:border-neutral-800 dark:bg-transparent border-neutral-800">
+        <div className="overflow-x-auto rounded-2xl border border-neutral-200 bg-white dark:bg-transparent dark:border-neutral-800 dark:bg-transparent">
           <table className="w-full text-sm">
             <thead className="bg-neutral-100 text-left dark:bg-neutral-900">
               <tr>

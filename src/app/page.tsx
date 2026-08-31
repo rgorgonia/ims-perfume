@@ -194,7 +194,7 @@ export default async function Dashboard() {
       {/* Per-store performance */}
       <section className="space-y-3">
         <h2 className="text-lg font-semibold">Store performance (30 days)</h2>
-        <div className="overflow-x-auto rounded-2xl border border-neutral-200 bg-white dark:border-neutral-800 dark:bg-transparent border-neutral-800">
+        <div className="overflow-x-auto rounded-2xl border border-neutral-200 bg-white dark:bg-transparent dark:border-neutral-800 dark:bg-transparent">
           <table className="w-full text-sm">
             <thead className="bg-neutral-100 text-left dark:bg-neutral-900">
               <tr>
@@ -235,7 +235,7 @@ export default async function Dashboard() {
         {/* Low stock */}
         <section className="space-y-3">
           <h2 className="text-lg font-semibold">Low stock</h2>
-          <ul className="space-y-2 rounded-2xl border border-neutral-200 bg-white p-4 text-sm dark:border-neutral-800">
+          <ul className="space-y-2 rounded-2xl border border-neutral-200 bg-white dark:bg-transparent p-4 text-sm dark:border-neutral-800">
             {lowStock.map((r, i) => (
               <li key={i} className="flex items-center justify-between gap-4">
                 <span>
@@ -260,7 +260,7 @@ export default async function Dashboard() {
         {/* Recent sales */}
         <section className="space-y-3">
           <h2 className="text-lg font-semibold">Recent sales</h2>
-          <ul className="space-y-2 rounded-2xl border border-neutral-200 bg-white p-4 text-sm dark:border-neutral-800">
+          <ul className="space-y-2 rounded-2xl border border-neutral-200 bg-white dark:bg-transparent p-4 text-sm dark:border-neutral-800">
             {((sales ?? []) as unknown as Sale[]).map((s) => (
               <li key={s.id} className="flex items-center justify-between gap-4">
                 <span className="text-neutral-600 dark:text-neutral-400">

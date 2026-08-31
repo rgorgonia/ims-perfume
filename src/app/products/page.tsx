@@ -75,7 +75,7 @@ export default async function ProductsPage() {
         <h1 className="text-2xl font-bold">Add product</h1>
         <form
           action={createProduct}
-          className="grid gap-3 rounded-2xl border border-neutral-200 bg-white p-4 sm:grid-cols-3 dark:border-neutral-800"
+          className="grid gap-3 rounded-2xl border border-neutral-200 bg-white dark:bg-transparent p-4 sm:grid-cols-3 dark:border-neutral-800"
         >
           <input name="name" required placeholder="Product name *" className={inputCls} />
           <input name="brand" placeholder="Brand" className={inputCls} />
@@ -129,7 +129,7 @@ export default async function ProductsPage() {
 
       <section className="space-y-3">
         <h2 className="text-xl font-semibold">Catalog</h2>
-        <div className="overflow-x-auto rounded-2xl border border-neutral-200 bg-white dark:border-neutral-800 dark:bg-transparent border-neutral-800">
+        <div className="overflow-x-auto rounded-2xl border border-neutral-200 bg-white dark:bg-transparent dark:border-neutral-800 dark:bg-transparent">
           <table className="w-full text-sm">
             <thead className="bg-neutral-100 text-left dark:bg-neutral-900">
               <tr>
