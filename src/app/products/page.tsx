@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
@@ -142,7 +143,11 @@ export default async function ProductsPage() {
             <tbody>
               {((products ?? []) as unknown as Product[]).map((p) => (
                 <tr key={p.id} className="border-t border-neutral-200 dark:border-neutral-800">
-                  <td className="px-4 py-2 font-medium">{p.name}</td>
+                  <td className="px-4 py-2 font-medium">
+                    <Link href={`/products/${p.id}`} className="hover:underline">
+                      {p.name}
+                    </Link>
+                  </td>
                   <td className="px-4 py-2">{p.brand ?? "—"}</td>
                   <td className="px-4 py-2">{p.concentration}</td>
                   <td className="px-4 py-2">

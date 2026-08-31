@@ -23,10 +23,14 @@ export const metadata: Metadata = {
 const navLinks = [
   { href: "/", label: "Dashboard" },
   { href: "/sales", label: "Sales" },
+  { href: "/inventory", label: "Inventory" },
   { href: "/products", label: "Products" },
   { href: "/stores", label: "Stores" },
   { href: "/users", label: "Users" },
 ];
+
+// Admin-only links are appended in the component based on the session role
+const adminNavLinks = [{ href: "/capital", label: "Capital" }];
 
 const themeInitScript = `
 (function () {
@@ -56,7 +60,10 @@ export default async function RootLayout({
           <nav className="border-b border-neutral-200 dark:border-neutral-800">
             <div className="mx-auto flex max-w-5xl items-center gap-6 px-4 py-3 text-sm">
               <span className="font-bold">Perfume IMS</span>
-              {navLinks.map((link) => (
+              {(session.profile?.role === "system_admin"
+                ? [...navLinks, ...adminNavLinks]
+                : navLinks
+              ).map((link) => (
                 <Link
                   key={link.href}
                   href={link.href}

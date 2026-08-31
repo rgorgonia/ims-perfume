@@ -85,6 +85,17 @@ export default async function Dashboard() {
   const totalRevenue = summaries.reduce((a, s) => a + s.revenue, 0);
   const totalProfit = summaries.reduce((a, s) => a + s.profit, 0);
 
+  // Merge per-store daily rows into one 14-day revenue series
+  const byDay = new Map<string, number>();
+  for (const s of summaries) {
+    for (const r of s.rows.slice(-14)) {
+      const day = String(r.day).slice(0, 10);
+      byDay.set(day, (byDay.get(day) ?? 0) + Number(r.revenue));
+    }
+  }
+  const chart = [...byDay.entries()].sort(([a], [b]) => a.localeCompare(b));
+  const maxDay = Math.max(...chart.map(([, v]) => v), 1);
+
   async function signOut() {
     "use server";
     const supabase = await createClient();
@@ -143,6 +154,36 @@ export default async function Dashboard() {
             <p className="text-xl font-bold">{visibleStores.length}</p>
           </div>
         )}
+      </section>
+
+      {/* Daily revenue chart */}
+      <section className="space-y-3">
+        <h2 className="text-lg font-semibold">Daily revenue (last 14 days)</h2>
+        <div className="rounded-xl border border-neutral-200 p-4 dark:border-neutral-800">
+          {chart.length === 0 ? (
+            <p className="py-6 text-center text-sm text-neutral-500">
+              No sales in the last 30 days.
+            </p>
+          ) : (
+            <div className="flex h-36 items-end gap-1.5">
+              {chart.map(([day, revenue]) => (
+                <div
+                  key={day}
+                  className="group flex flex-1 flex-col items-center gap-1"
+                  title={`${day}: ${peso(revenue)}`}
+                >
+                  <div
+                    className="w-full rounded-t bg-foreground/80 transition-colors group-hover:bg-foreground"
+                    style={{ height: `${Math.max((revenue / maxDay) * 100, 2)}%` }}
+                  />
+                  <span className="text-[10px] text-neutral-500">
+                    {day.slice(5)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </section>
 
       {/* Per-store performance */}
