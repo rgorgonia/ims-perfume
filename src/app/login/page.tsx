@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import ThemeToggle from "@/components/theme-toggle";
 
 export default function Login() {
   const router = useRouter();
@@ -33,8 +34,11 @@ export default function Login() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center p-8">
-      <main className="w-full max-w-sm space-y-6 rounded-2xl border border-neutral-200 p-8 dark:border-neutral-800">
+    <div className="relative flex min-h-screen items-center justify-center p-8">
+      <div className="absolute right-5 top-5">
+        <ThemeToggle />
+      </div>
+      <main className="soft w-full max-w-sm space-y-6 rounded-[18px] p-8">
         <h1 className="text-2xl font-bold">Sign in</h1>
         <form className="space-y-4" onSubmit={handleSignIn}>
           <div className="space-y-1">

@@ -14,9 +14,12 @@ export async function createClient() {
         },
         setAll(cookiesToSet) {
           try {
-            cookiesToSet.forEach(({ name, value, options }) =>
-              cookieStore.set(name, value, options)
-            );
+            cookiesToSet.forEach(({ name, value, options }) => {
+              // Strip persistent maxAge → session cookie, dies with the browser.
+              const { maxAge: _ignored, ...sessionOptions } = options;
+              void _ignored;
+              cookieStore.set(name, value, sessionOptions);
+            });
           } catch {
             // Called from a Server Component — safe to ignore when
             // middleware is refreshing sessions.
