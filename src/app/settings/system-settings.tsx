@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 import { updateSystemSettingsAction } from "@/app/actions";
 import type { AppSettings } from "@/lib/settings";
+import CategoriesEditor from "./categories-editor";
 
 const inputCls =
   "w-full rounded-[10px] border border-black/10 bg-white/60 px-3 py-2 text-sm text-neutral-900 outline-none focus:border-neutral-500/60 focus:ring-2 focus:ring-neutral-400/40 dark:border-white/10 dark:bg-white/5 dark:text-white";
@@ -73,14 +74,12 @@ export default function SystemSettings({ s }: { s: AppSettings }) {
           />
         </div>
         <div className="space-y-1 sm:col-span-2">
-          <label htmlFor="product_categories" className="text-sm font-medium">
-            Product categories <span className="font-normal text-neutral-500">(comma-separated)</span>
+          <label className="text-sm font-medium">
+            Product categories
           </label>
-          <input
-            id="product_categories"
+          <CategoriesEditor
             name="product_categories"
-            defaultValue={s.categories.join(", ")}
-            className={inputCls}
+            initial={s.categories}
           />
         </div>
         <div className="space-y-1 sm:col-span-2">
