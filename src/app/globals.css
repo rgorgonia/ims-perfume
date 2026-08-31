@@ -12,55 +12,55 @@
   --foreground: #e2e8f0;
 }
 
-/* ===== Teach 2.0-style light SaaS theme (default) ===== */
+/* ===== Apple-inspired design tokens ===== */
 :root {
-  --background: #f6f7f9;      /* soft gray canvas */
-  --foreground: #0f172a;
+  --background: #f5f5f7;        /* Apple light canvas */
+  --foreground: #1d1d1f;        /* Apple near-black */
   --panel: #ffffff;
-  --border-soft: #e8eaef;
-  --accent: #2563eb;          /* blue primary */
-  --accent-hover: #1d4ed8;
+  --border-soft: rgba(0, 0, 0, 0.08);   /* hairline separator */
+  --accent: #0071e3;            /* Apple blue */
+  --accent-hover: #0077ed;
+  --secondary-text: #6e6e73;    /* Apple gray text */
 }
 
 .dark {
-  --background: #0f172a;
-  --foreground: #e2e8f0;
-  --panel: #16213a;
-  --border-soft: rgba(255, 255, 255, 0.08);
-  --accent: #3b82f6;
-  --accent-hover: #60a5fa;
+  --background: #000000;        /* Apple true-black dark mode */
+  --foreground: #f5f5f7;
+  --panel: #1c1c1e;             /* Apple dark elevated surface */
+  --border-soft: rgba(255, 255, 255, 0.1);
+  --accent: #0a84ff;            /* Apple dark-mode blue */
+  --accent-hover: #409cff;
+  --secondary-text: #86868b;
 }
 
-/* Cards: white panels with a subtle ring (light) */
+/* Cards: white panels, hairline border, soft Apple shadow */
 .soft {
   background: var(--panel);
   border: 1px solid var(--border-soft);
-  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 4px 16px rgba(15, 23, 42, 0.04);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04), 0 8px 24px rgba(0, 0, 0, 0.04);
 }
 .dark .soft {
-  background: linear-gradient(145deg, #22304a, #1a2436);
-  border-color: rgba(255, 255, 255, 0.06);
-  box-shadow:
-    8px 8px 20px rgba(2, 6, 23, 0.55),
-    -4px -4px 14px rgba(148, 163, 184, 0.06),
-    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  background: var(--panel);
+  border-color: var(--border-soft);
+  box-shadow: none;
 }
 
-/* Blue primary buttons (was neon) */
+/* Pill primary buttons — Apple's 980px radius */
 .btn-neon {
   background: var(--accent);
   color: #fff;
-  font-weight: 600;
-  box-shadow: 0 1px 2px rgba(37, 99, 235, 0.35);
-  transition: background 80ms cubic-bezier(0.2, 0, 0, 1), box-shadow 120ms ease;
+  font-weight: 500;
+  border-radius: 980px;
+  box-shadow: none;
+  transition: background 120ms cubic-bezier(0.25, 0.1, 0.25, 1), transform 120ms cubic-bezier(0.25, 0.1, 0.25, 1), opacity 120ms;
 }
 .btn-neon:hover {
   background: var(--accent-hover);
-  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35);
 }
 /* Press feedback is instant (no transition on the way down); smooth on release */
 .btn-neon:active {
   transform: scale(0.97);
+  opacity: 0.85;
   transition-duration: 0ms;
 }
 
@@ -71,24 +71,24 @@ input,
 select,
 textarea {
   transition-duration: 100ms;
-  transition-timing-function: cubic-bezier(0.2, 0, 0, 1);
+  transition-timing-function: cubic-bezier(0.25, 0.1, 0.25, 1);
 }
 button:active {
   transition-duration: 0ms;
 }
 
-/* Hover lift for stat/feature cards */
+/* Hover lift — subtle, Apple-style (small distance, soft shadow) */
 .card-lift {
-  transition: transform 200ms ease, box-shadow 200ms ease, border-color 200ms ease;
+  transition: transform 300ms cubic-bezier(0.25, 0.1, 0.25, 1), box-shadow 300ms cubic-bezier(0.25, 0.1, 0.25, 1), border-color 300ms;
 }
 .card-lift:hover {
-  transform: translateY(-4px);
-  border-color: rgba(37, 99, 235, 0.45);
-  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.12), 0 0 0 1px rgba(37, 99, 235, 0.12);
+  transform: scale(1.01) translateY(-2px);
+  border-color: transparent;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08), 0 12px 32px rgba(0, 0, 0, 0.08);
 }
 .dark .card-lift:hover {
-  border-color: rgba(59, 130, 246, 0.5);
-  box-shadow: 0 12px 32px rgba(2, 6, 23, 0.6), 0 0 18px rgba(59, 130, 246, 0.2);
+  border-color: rgba(255, 255, 255, 0.15);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
 }
 
 
@@ -102,6 +102,14 @@ button:active {
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Helvetica Neue", "Segoe UI", Roboto, Inter, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  letter-spacing: -0.01em;
+}
+
+/* Apple-style tight display typography */
+h1, h2, h3 {
+  letter-spacing: -0.022em;
+  font-weight: 700;
 }
 

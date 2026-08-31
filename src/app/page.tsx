@@ -106,7 +106,7 @@ export default async function Dashboard() {
   }
 
   const statCls =
-    "card-lift soft rounded-3xl border border-neutral-200 p-5 dark:border-white/5";
+    "card-lift soft rounded-[18px] border border-neutral-200 p-5 dark:border-white/5";
 
   return (
     <div className="mx-auto max-w-5xl space-y-8 p-8">
@@ -122,7 +122,7 @@ export default async function Dashboard() {
         <form action={signOut}>
           <button
             type="submit"
-            className="rounded-2xl border border-neutral-300 px-3 py-1.5 text-sm hover:opacity-70 dark:border-neutral-700"
+            className="rounded-[10px] border border-black/10 px-3 py-1.5 text-sm hover:opacity-70 dark:border-neutral-700"
           >
             Sign out
           </button>
@@ -164,7 +164,7 @@ export default async function Dashboard() {
       <FadeIn delay={0.2}>
       <section className="space-y-3">
         <h2 className="text-lg font-semibold">Daily revenue (last 14 days)</h2>
-        <div className="card-lift soft rounded-3xl border border-neutral-200 p-5 dark:border-white/5">
+        <div className="card-lift soft rounded-[18px] border border-neutral-200 p-5 dark:border-white/5">
           {chart.length === 0 ? (
             <p className="py-6 text-center text-sm text-neutral-500">
               No sales in the last 30 days.

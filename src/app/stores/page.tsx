@@ -46,12 +46,12 @@ export default async function StoresPage() {
             name="name"
             required
             placeholder="Store name"
-            className="rounded-2xl border border-neutral-300 px-3 py-2 text-sm dark:border-neutral-700 dark:bg-transparent"
+            className="rounded-[10px] border border-black/10 px-3 py-2 text-sm dark:border-neutral-700 dark:bg-transparent"
           />
           <input
             name="address"
             placeholder="Address (optional)"
-            className="rounded-2xl border border-neutral-300 px-3 py-2 text-sm dark:border-neutral-700 dark:bg-transparent"
+            className="rounded-[10px] border border-black/10 px-3 py-2 text-sm dark:border-neutral-700 dark:bg-transparent"
           />
           <button
             type="submit"

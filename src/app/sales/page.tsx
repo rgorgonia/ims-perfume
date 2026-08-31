@@ -93,7 +93,7 @@ export default async function SalesPage() {
     ]);
 
   const inputCls =
-    "rounded-2xl border border-neutral-300 px-3 py-2 text-sm dark:border-neutral-700 dark:bg-transparent";
+    "rounded-[10px] border border-black/10 px-3 py-2 text-sm dark:border-neutral-700 dark:bg-transparent";
 
   return (
     <div className="mx-auto max-w-5xl space-y-8 p-8">

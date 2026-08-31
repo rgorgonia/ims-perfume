@@ -59,7 +59,7 @@ export default async function CapitalPage() {
     `₱${Number(n).toLocaleString("en-PH", { maximumFractionDigits: 2 })}`;
 
   const inputCls =
-    "rounded-2xl border border-neutral-300 px-3 py-2 text-sm dark:border-neutral-700 dark:bg-transparent";
+    "rounded-[10px] border border-black/10 px-3 py-2 text-sm dark:border-neutral-700 dark:bg-transparent";
 
   return (
     <div className="mx-auto max-w-4xl space-y-8 p-8">

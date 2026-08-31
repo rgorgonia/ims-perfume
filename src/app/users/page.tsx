@@ -82,25 +82,25 @@ export default async function UsersPage() {
             name="full_name"
             required
             placeholder="Full name"
-            className="rounded-2xl border border-neutral-300 px-3 py-2 text-sm dark:border-neutral-700 dark:bg-transparent"
+            className="rounded-[10px] border border-black/10 px-3 py-2 text-sm dark:border-neutral-700 dark:bg-transparent"
           />
           <input
             name="email"
             type="email"
             required
             placeholder="email@example.com"
-            className="rounded-2xl border border-neutral-300 px-3 py-2 text-sm dark:border-neutral-700 dark:bg-transparent"
+            className="rounded-[10px] border border-black/10 px-3 py-2 text-sm dark:border-neutral-700 dark:bg-transparent"
           />
           <select
             name="role"
-            className="rounded-2xl border border-neutral-300 px-3 py-2 text-sm dark:border-neutral-700 dark:bg-transparent"
+            className="rounded-[10px] border border-black/10 px-3 py-2 text-sm dark:border-neutral-700 dark:bg-transparent"
           >
             <option value="store_manager">Store Manager</option>
             <option value="system_admin">System Admin</option>
           </select>
           <select
             name="store_id"
-            className="rounded-2xl border border-neutral-300 px-3 py-2 text-sm dark:border-neutral-700 dark:bg-transparent"
+            className="rounded-[10px] border border-black/10 px-3 py-2 text-sm dark:border-neutral-700 dark:bg-transparent"
           >
             <option value="">No store (admin)</option>
             {(stores ?? []).map((s: Store) => (

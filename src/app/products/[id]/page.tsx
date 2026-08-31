@@ -122,7 +122,7 @@ export default async function ProductPage({
   ]);
 
   const inputCls =
-    "rounded-2xl border border-neutral-300 px-3 py-2 text-sm dark:border-neutral-700 dark:bg-transparent";
+    "rounded-[10px] border border-black/10 px-3 py-2 text-sm dark:border-neutral-700 dark:bg-transparent";
   const noteTypes: [string, string][] = [
     ["top", "Top notes"],
     ["heart", "Heart notes"],
