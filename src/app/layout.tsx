@@ -19,18 +19,17 @@ export const metadata: Metadata = {
   description: "Multi-store inventory management system for your perfume business.",
 };
 
-// Dark (midnight) is the default theme; "light" is opt-in via the toggle.
+// Light (SaaS) is the default theme; "dark" is opt-in via the toggle.
 const themeInitScript = `
 (function () {
   try {
-    if (localStorage.getItem("theme") === "light") {
-      document.documentElement.classList.remove("dark");
-      document.documentElement.classList.add("light");
-    } else {
+    if (localStorage.getItem("theme") === "dark") {
       document.documentElement.classList.add("dark");
+    } else {
+      document.documentElement.classList.remove("dark");
     }
   } catch (e) {
-    document.documentElement.classList.add("dark");
+    document.documentElement.classList.remove("dark");
   }
 })();
 `;
@@ -43,7 +42,7 @@ export default async function RootLayout({
   const session = await getSession();
 
   return (
-    <html lang="en" className="dark" suppressHydrationWarning>
+    <html lang="en" suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
       </head>

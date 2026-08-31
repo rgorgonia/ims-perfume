@@ -76,7 +76,7 @@ export default async function UsersPage() {
         </p>
         <form
           action={registerUser}
-          className="grid gap-3 rounded-2xl border border-neutral-200 p-4 sm:grid-cols-2 dark:border-neutral-800"
+          className="grid gap-3 rounded-2xl border border-neutral-200 bg-white p-4 sm:grid-cols-2 dark:border-neutral-800"
         >
           <input
             name="full_name"
@@ -120,7 +120,7 @@ export default async function UsersPage() {
 
       <section className="space-y-3">
         <h2 className="text-xl font-semibold">All users</h2>
-        <div className="overflow-x-auto rounded-2xl border border-neutral-200 dark:border-neutral-800">
+        <div className="overflow-x-auto rounded-2xl border border-neutral-200 bg-white dark:border-neutral-800 dark:bg-transparent border-neutral-800">
           <table className="w-full text-sm">
             <thead className="bg-neutral-100 text-left dark:bg-neutral-900">
               <tr>

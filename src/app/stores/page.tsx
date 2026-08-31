@@ -40,7 +40,7 @@ export default async function StoresPage() {
         <h1 className="text-2xl font-bold">Add store</h1>
         <form
           action={createStore}
-          className="grid gap-3 rounded-2xl border border-neutral-200 p-4 sm:grid-cols-2 dark:border-neutral-800"
+          className="grid gap-3 rounded-2xl border border-neutral-200 bg-white p-4 sm:grid-cols-2 dark:border-neutral-800"
         >
           <input
             name="name"
@@ -64,7 +64,7 @@ export default async function StoresPage() {
 
       <section className="space-y-3">
         <h2 className="text-xl font-semibold">All stores</h2>
-        <div className="overflow-x-auto rounded-2xl border border-neutral-200 dark:border-neutral-800">
+        <div className="overflow-x-auto rounded-2xl border border-neutral-200 bg-white dark:border-neutral-800 dark:bg-transparent border-neutral-800">
           <table className="w-full text-sm">
             <thead className="bg-neutral-100 text-left dark:bg-neutral-900">
               <tr>
