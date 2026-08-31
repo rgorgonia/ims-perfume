@@ -1,6 +1,8 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { requireUser } from "@/lib/auth";
+import FadeIn from "@/components/fade-in";
+import Ticker from "@/components/ticker";
 
 type SummaryRow = { day: string; revenue: number; cogs: number; profit: number };
 type Store = { id: string; name: string };
@@ -104,7 +106,7 @@ export default async function Dashboard() {
   }
 
   const statCls =
-    "rounded-none border border-neutral-200 p-4 dark:border-neutral-800";
+    "card-lift soft rounded-3xl border border-white/5 p-5";
 
   return (
     <div className="mx-auto max-w-5xl space-y-8 p-8">
@@ -120,7 +122,7 @@ export default async function Dashboard() {
         <form action={signOut}>
           <button
             type="submit"
-            className="rounded-none border border-neutral-300 px-3 py-1.5 text-sm hover:opacity-70 dark:border-neutral-700"
+            className="rounded-2xl border border-neutral-300 px-3 py-1.5 text-sm hover:opacity-70 dark:border-neutral-700"
           >
             Sign out
           </button>
@@ -128,10 +130,11 @@ export default async function Dashboard() {
       </header>
 
       {/* Stat cards */}
+      <FadeIn delay={0.1}>
       <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <div className={statCls}>
           <p className="text-xs text-neutral-500">Revenue (30d)</p>
-          <p className="text-xl font-bold">{peso(totalRevenue)}</p>
+          <p className="text-xl font-bold text-white"><Ticker value={totalRevenue} /></p>
         </div>
         <div className={statCls}>
           <p className="text-xs text-neutral-500">Gross profit (30d)</p>
@@ -155,11 +158,13 @@ export default async function Dashboard() {
           </div>
         )}
       </section>
+      </FadeIn>
 
       {/* Daily revenue chart */}
+      <FadeIn delay={0.2}>
       <section className="space-y-3">
         <h2 className="text-lg font-semibold">Daily revenue (last 14 days)</h2>
-        <div className="rounded-none border border-neutral-200 p-4 dark:border-neutral-800">
+        <div className="card-lift soft rounded-3xl border border-white/5 p-5">
           {chart.length === 0 ? (
             <p className="py-6 text-center text-sm text-neutral-500">
               No sales in the last 30 days.
@@ -189,7 +194,7 @@ export default async function Dashboard() {
       {/* Per-store performance */}
       <section className="space-y-3">
         <h2 className="text-lg font-semibold">Store performance (30 days)</h2>
-        <div className="overflow-x-auto rounded-none border border-neutral-200 dark:border-neutral-800">
+        <div className="overflow-x-auto rounded-2xl border border-neutral-200 dark:border-neutral-800">
           <table className="w-full text-sm">
             <thead className="bg-neutral-100 text-left dark:bg-neutral-900">
               <tr>
@@ -223,12 +228,14 @@ export default async function Dashboard() {
           </table>
         </div>
       </section>
+      </FadeIn>
 
+      <FadeIn delay={0.4}>
       <div className="grid gap-8 lg:grid-cols-2">
         {/* Low stock */}
         <section className="space-y-3">
           <h2 className="text-lg font-semibold">Low stock</h2>
-          <ul className="space-y-2 rounded-none border border-neutral-200 p-4 text-sm dark:border-neutral-800">
+          <ul className="space-y-2 rounded-2xl border border-neutral-200 p-4 text-sm dark:border-neutral-800">
             {lowStock.map((r, i) => (
               <li key={i} className="flex items-center justify-between gap-4">
                 <span>
@@ -253,7 +260,7 @@ export default async function Dashboard() {
         {/* Recent sales */}
         <section className="space-y-3">
           <h2 className="text-lg font-semibold">Recent sales</h2>
-          <ul className="space-y-2 rounded-none border border-neutral-200 p-4 text-sm dark:border-neutral-800">
+          <ul className="space-y-2 rounded-2xl border border-neutral-200 p-4 text-sm dark:border-neutral-800">
             {((sales ?? []) as unknown as Sale[]).map((s) => (
               <li key={s.id} className="flex items-center justify-between gap-4">
                 <span className="text-neutral-600 dark:text-neutral-400">
@@ -269,6 +276,7 @@ export default async function Dashboard() {
           </ul>
         </section>
       </div>
+      </FadeIn>
     </div>
   );
 }

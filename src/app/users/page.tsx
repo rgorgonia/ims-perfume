@@ -76,31 +76,31 @@ export default async function UsersPage() {
         </p>
         <form
           action={registerUser}
-          className="grid gap-3 rounded-none border border-neutral-200 p-4 sm:grid-cols-2 dark:border-neutral-800"
+          className="grid gap-3 rounded-2xl border border-neutral-200 p-4 sm:grid-cols-2 dark:border-neutral-800"
         >
           <input
             name="full_name"
             required
             placeholder="Full name"
-            className="rounded-none border border-neutral-300 px-3 py-2 text-sm dark:border-neutral-700 dark:bg-transparent"
+            className="rounded-2xl border border-neutral-300 px-3 py-2 text-sm dark:border-neutral-700 dark:bg-transparent"
           />
           <input
             name="email"
             type="email"
             required
             placeholder="email@example.com"
-            className="rounded-none border border-neutral-300 px-3 py-2 text-sm dark:border-neutral-700 dark:bg-transparent"
+            className="rounded-2xl border border-neutral-300 px-3 py-2 text-sm dark:border-neutral-700 dark:bg-transparent"
           />
           <select
             name="role"
-            className="rounded-none border border-neutral-300 px-3 py-2 text-sm dark:border-neutral-700 dark:bg-transparent"
+            className="rounded-2xl border border-neutral-300 px-3 py-2 text-sm dark:border-neutral-700 dark:bg-transparent"
           >
             <option value="store_manager">Store Manager</option>
             <option value="system_admin">System Admin</option>
           </select>
           <select
             name="store_id"
-            className="rounded-none border border-neutral-300 px-3 py-2 text-sm dark:border-neutral-700 dark:bg-transparent"
+            className="rounded-2xl border border-neutral-300 px-3 py-2 text-sm dark:border-neutral-700 dark:bg-transparent"
           >
             <option value="">No store (admin)</option>
             {(stores ?? []).map((s: Store) => (
@@ -111,7 +111,7 @@ export default async function UsersPage() {
           </select>
           <button
             type="submit"
-            className="rounded-none bg-foreground px-4 py-2 text-sm font-medium text-background transition-opacity hover:opacity-80 sm:col-span-2"
+            className="rounded-2xl btn-neon px-4 py-2 text-sm font-medium transition-opacity hover:opacity-80 sm:col-span-2"
           >
             Create user
           </button>
@@ -120,7 +120,7 @@ export default async function UsersPage() {
 
       <section className="space-y-3">
         <h2 className="text-xl font-semibold">All users</h2>
-        <div className="overflow-x-auto rounded-none border border-neutral-200 dark:border-neutral-800">
+        <div className="overflow-x-auto rounded-2xl border border-neutral-200 dark:border-neutral-800">
           <table className="w-full text-sm">
             <thead className="bg-neutral-100 text-left dark:bg-neutral-900">
               <tr>

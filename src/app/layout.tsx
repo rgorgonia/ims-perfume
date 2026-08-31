@@ -1,9 +1,8 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import Link from "next/link";
 import "./globals.css";
 import { getSession } from "@/lib/auth";
-import ThemeToggle from "@/components/theme-toggle";
+import AppShell from "@/components/app-shell";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -20,24 +19,19 @@ export const metadata: Metadata = {
   description: "Multi-store inventory management system for your perfume business.",
 };
 
-const navLinks = [
-  { href: "/", label: "Dashboard" },
-  { href: "/sales", label: "Sales" },
-  { href: "/inventory", label: "Inventory" },
-  { href: "/products", label: "Products" },
-  { href: "/stores", label: "Stores" },
-  { href: "/users", label: "Users" },
-];
-
-// Admin-only links are appended in the component based on the session role
-const adminNavLinks = [{ href: "/capital", label: "Capital" }];
-
+// Dark (midnight) is the default theme; "light" is opt-in via the toggle.
 const themeInitScript = `
 (function () {
   try {
-    var t = localStorage.getItem("theme");
-    if (t === "dark") document.documentElement.classList.add("dark");
-  } catch (e) {}
+    if (localStorage.getItem("theme") === "light") {
+      document.documentElement.classList.remove("dark");
+      document.documentElement.classList.add("light");
+    } else {
+      document.documentElement.classList.add("dark");
+    }
+  } catch (e) {
+    document.documentElement.classList.add("dark");
+  }
 })();
 `;
 
@@ -49,39 +43,23 @@ export default async function RootLayout({
   const session = await getSession();
 
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" className="dark" suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        {session && (
-          <nav className="border-b border-neutral-200 dark:border-neutral-800">
-            <div className="mx-auto flex max-w-5xl items-center gap-6 px-4 py-3 text-sm">
-              <span className="font-bold">Perfume IMS</span>
-              {(session.profile?.role === "system_admin"
-                ? [...navLinks, ...adminNavLinks]
-                : navLinks
-              ).map((link) => (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  className="text-neutral-600 transition-colors hover:text-foreground dark:text-neutral-400"
-                >
-                  {link.label}
-                </Link>
-              ))}
-              <span className="ml-auto text-neutral-500">
-                {session.user.email}
-              </span>
-              <ThemeToggle />
-            </div>
-          </nav>
+        {session ? (
+          <AppShell email={session.user.email} isAdmin={session.profile?.role === "system_admin"}>
+            {children}
+          </AppShell>
+        ) : (
+          children
         )}
-        {children}
       </body>
     </html>
   );
 }
+
 

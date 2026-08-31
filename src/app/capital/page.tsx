@@ -59,7 +59,7 @@ export default async function CapitalPage() {
     `₱${Number(n).toLocaleString("en-PH", { maximumFractionDigits: 2 })}`;
 
   const inputCls =
-    "rounded-none border border-neutral-300 px-3 py-2 text-sm dark:border-neutral-700 dark:bg-transparent";
+    "rounded-2xl border border-neutral-300 px-3 py-2 text-sm dark:border-neutral-700 dark:bg-transparent";
 
   return (
     <div className="mx-auto max-w-4xl space-y-8 p-8">
@@ -75,7 +75,7 @@ export default async function CapitalPage() {
         </div>
         <form
           action={addEntry}
-          className="grid gap-3 rounded-none border border-neutral-200 p-4 sm:grid-cols-2 dark:border-neutral-800"
+          className="grid gap-3 rounded-2xl border border-neutral-200 p-4 sm:grid-cols-2 dark:border-neutral-800"
         >
           <select name="entry_type" required className={inputCls}>
             <option value="capital_in">Capital in (investment)</option>
@@ -104,7 +104,7 @@ export default async function CapitalPage() {
           />
           <button
             type="submit"
-            className="rounded-none bg-foreground px-4 py-2 text-sm font-medium text-background transition-opacity hover:opacity-80 sm:col-span-2"
+            className="rounded-2xl btn-neon px-4 py-2 text-sm font-medium transition-opacity hover:opacity-80 sm:col-span-2"
           >
             Add entry
           </button>
@@ -113,7 +113,7 @@ export default async function CapitalPage() {
 
       <section className="space-y-3">
         <h2 className="text-xl font-semibold">Recent entries</h2>
-        <div className="overflow-x-auto rounded-none border border-neutral-200 dark:border-neutral-800">
+        <div className="overflow-x-auto rounded-2xl border border-neutral-200 dark:border-neutral-800">
           <table className="w-full text-sm">
             <thead className="bg-neutral-100 text-left dark:bg-neutral-900">
               <tr>

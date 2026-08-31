@@ -8,9 +8,44 @@
 }
 
 .dark {
-  --background: #0a0a0a;
-  --foreground: #ededed;
+  --background: #0f172a;
+  --foreground: #e2e8f0;
 }
+
+/* Soft-UI depth for cards (dark theme) */
+.dark .soft {
+  background: linear-gradient(145deg, #22304a, #1a2436);
+  box-shadow:
+    8px 8px 20px rgba(2, 6, 23, 0.55),
+    -4px -4px 14px rgba(148, 163, 184, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+/* Neon gradient primary buttons */
+.btn-neon {
+  background: linear-gradient(90deg, #a855f7, #06b6d4);
+  color: #fff;
+  font-weight: 600;
+  box-shadow: 0 0 20px rgba(168, 85, 247, 0.35);
+  transition: filter 150ms ease, transform 150ms ease;
+}
+.btn-neon:hover {
+  filter: brightness(1.1);
+}
+.btn-neon:active {
+  transform: scale(0.97);
+}
+
+/* Hover lift for stat/feature cards */
+.dark .card-lift {
+  transition: transform 200ms ease, box-shadow 200ms ease, border-color 200ms ease;
+}
+.dark .card-lift:hover {
+  transform: translateY(-4px);
+  border-color: rgba(6, 182, 212, 0.5);
+  box-shadow: 0 12px 32px rgba(2, 6, 23, 0.6), 0 0 18px rgba(6, 182, 212, 0.2);
+}
+
 
 @theme inline {
   --color-background: var(--background);

@@ -34,7 +34,7 @@ export default function Login() {
 
   return (
     <div className="flex min-h-screen items-center justify-center p-8">
-      <main className="w-full max-w-sm space-y-6 rounded-none border border-neutral-200 p-8 dark:border-neutral-800">
+      <main className="w-full max-w-sm space-y-6 rounded-2xl border border-neutral-200 p-8 dark:border-neutral-800">
         <h1 className="text-2xl font-bold">Sign in</h1>
         <form className="space-y-4" onSubmit={handleSignIn}>
           <div className="space-y-1">
@@ -48,7 +48,7 @@ export default function Login() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="you@example.com"
-              className="w-full rounded-none border border-neutral-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-neutral-400 dark:border-neutral-700 dark:bg-transparent"
+              className="w-full rounded-2xl border border-neutral-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-neutral-400 dark:border-neutral-700 dark:bg-transparent"
             />
           </div>
           <div className="space-y-1">
@@ -62,7 +62,7 @@ export default function Login() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
-              className="w-full rounded-none border border-neutral-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-neutral-400 dark:border-neutral-700 dark:bg-transparent"
+              className="w-full rounded-2xl border border-neutral-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-neutral-400 dark:border-neutral-700 dark:bg-transparent"
             />
           </div>
           {error && (
@@ -71,7 +71,7 @@ export default function Login() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full rounded-none bg-foreground py-2 text-sm font-medium text-background transition-opacity hover:opacity-80 disabled:opacity-50"
+            className="w-full rounded-2xl btn-neon py-2 text-sm font-medium transition-opacity hover:opacity-80 disabled:opacity-50"
           >
             {loading ? "Signing in…" : "Sign in"}
           </button>
