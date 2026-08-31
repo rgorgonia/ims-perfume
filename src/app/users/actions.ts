@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { requireAdmin } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -16,6 +17,25 @@ function generateTempPassword() {
   const chars = "abcdefghjkmnpqrstuvwxyzABCDEFGHJKMNPQRSTUVWXYZ23456789";
   const pick = () => chars[crypto.getRandomValues(new Uint32Array(1))[0] % chars.length];
   return [3, 4, 4].map((n) => Array.from({ length: n }, pick).join("")).join("-");
+}
+
+/** Default password an admin resets a user to. The user should change it in Settings. */
+const DEFAULT_TEMP_PASSWORD = "password123";
+
+export async function resetUserPasswordAction(formData: FormData) {
+  await requireAdmin();
+  const userId = String(formData.get("user_id") ?? "").trim();
+  const email = String(formData.get("email") ?? "").trim();
+  if (!userId) return;
+
+  const admin = createAdminClient();
+  const { error } = await admin.auth.admin.updateUserById(userId, {
+    password: DEFAULT_TEMP_PASSWORD,
+  });
+  if (error) return;
+
+  revalidatePath("/users");
+  redirect(`/users?reset=${encodeURIComponent(email)}`);
 }
 
 export async function registerUserAction(

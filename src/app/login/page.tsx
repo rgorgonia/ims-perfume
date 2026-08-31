@@ -80,12 +80,6 @@ export default function Login() {
             {loading ? "Signing in…" : "Sign in"}
           </button>
         </form>
-        <a
-          href="/forgot-password"
-          className="block text-center text-sm underline underline-offset-4"
-        >
-          Forgot password?
-        </a>
       </main>
     </div>
   );

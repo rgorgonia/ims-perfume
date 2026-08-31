@@ -2,6 +2,8 @@ import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import RegisterForm from "./register-form";
+import ResetPasswordButton from "./reset-button";
+import { resetUserPasswordAction } from "./actions";
 
 type Store = { id: string; name: string };
 type ProfileRow = {
@@ -14,9 +16,14 @@ type ProfileRow = {
 };
 
 
-export default async function UsersPage() {
+export default async function UsersPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ reset?: string }>;
+}) {
   await requireAdmin();
   const supabase = await createClient();
+  const { reset } = await searchParams;
 
   const [{ data: profiles }, { data: stores }] = await Promise.all([
     supabase
@@ -28,6 +35,13 @@ export default async function UsersPage() {
 
   return (
     <div className="mx-auto max-w-5xl space-y-8 p-8">
+      {reset && (
+        <div className="rounded-2xl border border-emerald-300 bg-emerald-50 p-4 text-sm text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-200">
+          Password for <span className="font-semibold">{reset}</span> has been
+          reset to the default temporary password. Tell them to log in with it
+          and change it on their Settings page.
+        </div>
+      )}
       <section className="space-y-4">
         <h1 className="text-2xl font-bold">Register user</h1>
         <p className="text-sm text-neutral-600 dark:text-neutral-400">
@@ -61,15 +75,22 @@ export default async function UsersPage() {
                     {p.is_active ? "Active" : "Disabled"}
                   </td>
                   <td className="px-4 py-2 text-right">
-                    <form action={toggleActive}>
-                      <input type="hidden" name="user_id" value={p.id} />
-                      <button
-                        type="submit"
-                        className="text-xs underline underline-offset-2 hover:opacity-70"
-                      >
-                        {p.is_active ? "Disable" : "Enable"}
-                      </button>
-                    </form>
+                    <div className="flex items-center justify-end gap-3">
+                      <ResetPasswordButton
+                        action={resetUserPasswordAction}
+                        userId={p.id}
+                        email={p.full_name}
+                      />
+                      <form action={toggleActive}>
+                        <input type="hidden" name="user_id" value={p.id} />
+                        <button
+                          type="submit"
+                          className="text-xs underline underline-offset-2 hover:opacity-70"
+                        >
+                          {p.is_active ? "Disable" : "Enable"}
+                        </button>
+                      </form>
+                    </div>
                   </td>
                 </tr>
               ))}
