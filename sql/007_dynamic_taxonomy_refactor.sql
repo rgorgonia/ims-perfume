@@ -134,11 +134,6 @@ where s.key = 'category_options'
   and jsonb_typeof(s.value::jsonb) = 'array'
 on conflict (category_id, attribute_key) do nothing;
 
-  before insert or update of attributes, product_id on public.product_variants
-  for each row execute function public.validate_variant_attributes();
-
-
-
 -- app_settings holds only public catalog config (branding/currency) —
 -- readable by anon so unstable_cache can fetch without a user session.
 create policy "settings_read_public"
