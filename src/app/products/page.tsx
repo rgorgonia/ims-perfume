@@ -67,7 +67,7 @@ export default async function ProductsPage() {
     .order("name");
 
   const inputCls =
-    "rounded-lg border border-neutral-300 px-3 py-2 text-sm dark:border-neutral-700 dark:bg-transparent";
+    "rounded-none border border-neutral-300 px-3 py-2 text-sm dark:border-neutral-700 dark:bg-transparent";
 
   return (
     <div className="mx-auto max-w-5xl space-y-8 p-8">
@@ -75,7 +75,7 @@ export default async function ProductsPage() {
         <h1 className="text-2xl font-bold">Add product</h1>
         <form
           action={createProduct}
-          className="grid gap-3 rounded-xl border border-neutral-200 p-4 sm:grid-cols-3 dark:border-neutral-800"
+          className="grid gap-3 rounded-none border border-neutral-200 p-4 sm:grid-cols-3 dark:border-neutral-800"
         >
           <input name="name" required placeholder="Product name *" className={inputCls} />
           <input name="brand" placeholder="Brand" className={inputCls} />
@@ -120,7 +120,7 @@ export default async function ProductsPage() {
           )}
           <button
             type="submit"
-            className="rounded-lg bg-foreground px-4 py-2 text-sm font-medium text-background transition-opacity hover:opacity-80 sm:col-span-3"
+            className="rounded-none bg-foreground px-4 py-2 text-sm font-medium text-background transition-opacity hover:opacity-80 sm:col-span-3"
           >
             Create product
           </button>
@@ -129,7 +129,7 @@ export default async function ProductsPage() {
 
       <section className="space-y-3">
         <h2 className="text-xl font-semibold">Catalog</h2>
-        <div className="overflow-x-auto rounded-xl border border-neutral-200 dark:border-neutral-800">
+        <div className="overflow-x-auto rounded-none border border-neutral-200 dark:border-neutral-800">
           <table className="w-full text-sm">
             <thead className="bg-neutral-100 text-left dark:bg-neutral-900">
               <tr>

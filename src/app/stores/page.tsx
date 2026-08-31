@@ -40,22 +40,22 @@ export default async function StoresPage() {
         <h1 className="text-2xl font-bold">Add store</h1>
         <form
           action={createStore}
-          className="grid gap-3 rounded-xl border border-neutral-200 p-4 sm:grid-cols-2 dark:border-neutral-800"
+          className="grid gap-3 rounded-none border border-neutral-200 p-4 sm:grid-cols-2 dark:border-neutral-800"
         >
           <input
             name="name"
             required
             placeholder="Store name"
-            className="rounded-lg border border-neutral-300 px-3 py-2 text-sm dark:border-neutral-700 dark:bg-transparent"
+            className="rounded-none border border-neutral-300 px-3 py-2 text-sm dark:border-neutral-700 dark:bg-transparent"
           />
           <input
             name="address"
             placeholder="Address (optional)"
-            className="rounded-lg border border-neutral-300 px-3 py-2 text-sm dark:border-neutral-700 dark:bg-transparent"
+            className="rounded-none border border-neutral-300 px-3 py-2 text-sm dark:border-neutral-700 dark:bg-transparent"
           />
           <button
             type="submit"
-            className="rounded-lg bg-foreground px-4 py-2 text-sm font-medium text-background transition-opacity hover:opacity-80 sm:col-span-2"
+            className="rounded-none bg-foreground px-4 py-2 text-sm font-medium text-background transition-opacity hover:opacity-80 sm:col-span-2"
           >
             Create store
           </button>
@@ -64,7 +64,7 @@ export default async function StoresPage() {
 
       <section className="space-y-3">
         <h2 className="text-xl font-semibold">All stores</h2>
-        <div className="overflow-x-auto rounded-xl border border-neutral-200 dark:border-neutral-800">
+        <div className="overflow-x-auto rounded-none border border-neutral-200 dark:border-neutral-800">
           <table className="w-full text-sm">
             <thead className="bg-neutral-100 text-left dark:bg-neutral-900">
               <tr>

@@ -122,7 +122,7 @@ export default async function ProductPage({
   ]);
 
   const inputCls =
-    "rounded-lg border border-neutral-300 px-3 py-2 text-sm dark:border-neutral-700 dark:bg-transparent";
+    "rounded-none border border-neutral-300 px-3 py-2 text-sm dark:border-neutral-700 dark:bg-transparent";
   const noteTypes: [string, string][] = [
     ["top", "Top notes"],
     ["heart", "Heart notes"],
@@ -148,7 +148,7 @@ export default async function ProductPage({
 
       <section className="space-y-3">
         <h2 className="text-lg font-semibold">Variants</h2>
-        <ul className="space-y-1 rounded-xl border border-neutral-200 p-4 text-sm dark:border-neutral-800">
+        <ul className="space-y-1 rounded-none border border-neutral-200 p-4 text-sm dark:border-neutral-800">
           {variantList.map((v) => (
             <li key={v.id} className="flex justify-between">
               <span>
@@ -158,7 +158,7 @@ export default async function ProductPage({
             </li>
           ))}
         </ul>
-        <form action={addVariant} className="grid gap-3 rounded-xl border border-neutral-200 p-4 sm:grid-cols-3 dark:border-neutral-800">
+        <form action={addVariant} className="grid gap-3 rounded-none border border-neutral-200 p-4 sm:grid-cols-3 dark:border-neutral-800">
           <input type="hidden" name="product_id" value={id} />
           <input name="sku" required placeholder="SKU *" className={inputCls} />
           <input name="size_ml" required type="number" min="1" placeholder="Size (ml) *" className={inputCls} />
@@ -170,7 +170,7 @@ export default async function ProductPage({
           </select>
           <input name="retail_price" type="number" step="0.01" min="0" placeholder="Retail price" className={inputCls} />
           <input name="low_stock_threshold" type="number" min="0" placeholder="Low-stock threshold" className={inputCls} />
-          <button type="submit" className="rounded-lg bg-foreground px-4 py-2 text-sm font-medium text-background hover:opacity-80">
+          <button type="submit" className="rounded-none bg-foreground px-4 py-2 text-sm font-medium text-background hover:opacity-80">
             Add variant
           </button>
         </form>
@@ -180,7 +180,7 @@ export default async function ProductPage({
         <h2 className="text-lg font-semibold">Scent profile</h2>
         <div className="grid gap-3 sm:grid-cols-3">
           {noteTypes.map(([type, label]) => (
-            <div key={type} className="rounded-xl border border-neutral-200 p-4 dark:border-neutral-800">
+            <div key={type} className="rounded-none border border-neutral-200 p-4 dark:border-neutral-800">
               <p className="mb-2 text-sm font-medium">{label}</p>
               <div className="flex flex-wrap gap-2">
                 {noteList.filter((n) => n.note_type === type).map((n) => (
@@ -190,7 +190,7 @@ export default async function ProductPage({
                     <button
                       type="submit"
                       title="Remove"
-                      className="rounded-full bg-neutral-100 px-3 py-1 text-xs hover:bg-red-100 dark:bg-neutral-900 dark:hover:bg-red-950"
+                      className="rounded-none bg-neutral-100 px-3 py-1 text-xs hover:bg-red-100 dark:bg-neutral-900 dark:hover:bg-red-950"
                     >
                       {n.note_name} ✕
                     </button>
@@ -211,7 +211,7 @@ export default async function ProductPage({
             <option value="base">Base</option>
           </select>
           <input name="note_name" required placeholder="e.g. bergamot" className={`${inputCls} flex-1`} />
-          <button type="submit" className="rounded-lg bg-foreground px-4 py-2 text-sm font-medium text-background hover:opacity-80">
+          <button type="submit" className="rounded-none bg-foreground px-4 py-2 text-sm font-medium text-background hover:opacity-80">
             Add note
           </button>
         </form>
@@ -219,7 +219,7 @@ export default async function ProductPage({
 
       <section className="space-y-3">
         <h2 className="text-lg font-semibold">Batches / lots</h2>
-        <ul className="space-y-1 rounded-xl border border-neutral-200 p-4 text-sm dark:border-neutral-800">
+        <ul className="space-y-1 rounded-none border border-neutral-200 p-4 text-sm dark:border-neutral-800">
           {batchList.map((b) => (
             <li key={b.id} className="flex justify-between">
               <span>
@@ -237,7 +237,7 @@ export default async function ProductPage({
             <li className="text-center text-neutral-500">No batches recorded.</li>
           )}
         </ul>
-        <form action={addBatch} className="grid gap-3 rounded-xl border border-neutral-200 p-4 sm:grid-cols-2 dark:border-neutral-800">
+        <form action={addBatch} className="grid gap-3 rounded-none border border-neutral-200 p-4 sm:grid-cols-2 dark:border-neutral-800">
           <input type="hidden" name="product_id" value={id} />
           <select name="variant_id" required className={inputCls}>
             <option value="">Select variant *</option>
@@ -247,7 +247,7 @@ export default async function ProductPage({
           </select>
           <input name="lot_number" required placeholder="Lot number *" className={inputCls} />
           <input name="expires_on" type="date" className={inputCls} aria-label="Expires on" />
-          <button type="submit" className="rounded-lg bg-foreground px-4 py-2 text-sm font-medium text-background hover:opacity-80">
+          <button type="submit" className="rounded-none bg-foreground px-4 py-2 text-sm font-medium text-background hover:opacity-80">
             Add batch
           </button>
         </form>
