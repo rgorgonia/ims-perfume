@@ -79,6 +79,8 @@ end $$;
 
 drop trigger if exists trg_validate_variant_attributes on public.product_variants;
 create trigger trg_validate_variant_attributes
+  before insert or update of attributes, product_id on public.product_variants
+  for each row execute function public.validate_variant_attributes();
 
 -- ------------------------------------------------------------
 -- 5. RLS — taxonomy readable by everyone (public catalog metadata,
