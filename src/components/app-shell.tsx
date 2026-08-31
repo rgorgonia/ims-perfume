@@ -50,8 +50,8 @@ export default function AppShell({
 
   return (
     <div className="min-h-dvh">
-      {/* Desktop sidebar — floating glass pane (spatial) */}
-      <aside className="fixed inset-y-0 left-0 z-40 hidden w-64 flex-col gap-4 border-r border-black/[0.08] bg-white/70 px-4 py-6 backdrop-blur-2xl backdrop-saturate-150 md:flex md:dark:inset-y-4 md:dark:left-4 md:dark:rounded-[28px] md:dark:border md:dark:border-white/15 md:dark:bg-white/5 md:dark:shadow-[0_8px_32px_rgba(0,0,0,0.4)] md:dark:backdrop-blur-2xl">
+      {/* Desktop sidebar — floating glass pane (spatial, both themes) */}
+      <aside className="fixed inset-y-0 left-0 z-40 hidden w-64 flex-col gap-4 border-r border-black/[0.08] bg-white/70 px-4 py-6 backdrop-blur-2xl backdrop-saturate-150 md:flex md:inset-y-4 md:left-4 md:rounded-[28px] md:border md:border-white/60 md:shadow-[0_8px_32px_rgba(30,50,40,0.1)] md:dark:inset-y-4 md:dark:left-4 md:dark:rounded-[28px] md:dark:border md:dark:border-white/15 md:dark:bg-white/5 md:dark:shadow-[0_8px_32px_rgba(0,0,0,0.4)]">
         <div className="flex items-center gap-2.5 px-2">
           <span className="flex h-9 w-9 items-center justify-center rounded-[10px] bg-blue-600 font-semibold text-white">
             P
@@ -119,7 +119,7 @@ export default function AppShell({
       </header>
 
       {/* Content */}
-      <div className="md:pl-64 md:dark:pl-[18rem]">{children}</div>
+      <div className="md:pl-[18rem]">{children}</div>
 
       {/* Mobile bottom nav */}
       <div className="fixed inset-x-0 bottom-0 z-40 border-t border-black/[0.08] bg-white/70 backdrop-blur-2xl backdrop-saturate-150 md:hidden dark:border-white/10 dark:bg-[#1c1c1e]/70">
