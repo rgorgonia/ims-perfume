@@ -119,14 +119,6 @@ export default async function Dashboard() {
             {isAdmin ? "Business overview — last 30 days" : "Your store — last 30 days"}
           </p>
         </div>
-        <form action={signOut}>
-          <button
-            type="submit"
-            className="rounded-[10px] border border-black/10 px-3 py-1.5 text-sm hover:opacity-70 dark:border-neutral-700"
-          >
-            Sign out
-          </button>
-        </form>
       </header>
 
       {/* Stat cards */}

@@ -111,6 +111,14 @@ button:active {
   transition-duration: 0ms;
 }
 
+/* Instant tab reaction: press feedback with zero delay; smooth release */
+nav a:active,
+nav button:active {
+  opacity: 0.6;
+  transform: scale(0.97);
+  transition-duration: 0ms;
+}
+
 /* Neutral focus ring instead of the browser's default blue */
 :focus-visible {
   outline: 2px solid rgba(130, 130, 135, 0.7);
