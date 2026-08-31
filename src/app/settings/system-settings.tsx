@@ -83,6 +83,24 @@ export default function SystemSettings({ s }: { s: AppSettings }) {
             className={inputCls}
           />
         </div>
+        <div className="space-y-1 sm:col-span-2">
+          <label htmlFor="category_options" className="text-sm font-medium">
+            Category dropdown options{" "}
+            <span className="font-normal text-neutral-500">
+              (one line per category: <code>Category: option 1, option 2</code> — leave a line out to hide that dropdown)
+            </span>
+          </label>
+          <textarea
+            id="category_options"
+            name="category_options"
+            rows={3}
+            className={`${inputCls} font-mono text-xs`}
+            defaultValue={Object.entries(s.categoryOptions)
+              .map(([cat, opts]) => `${cat}: ${opts.join(", ")}`)
+              .join("\n")}
+            placeholder={"Fragrance: EDT, EDP, EXTRAIT, EDC, OIL\nBeverage: Hot, Iced"}
+          />
+        </div>
         <label className="flex items-center gap-2 text-sm font-medium sm:col-span-2">
           <input
             type="checkbox"

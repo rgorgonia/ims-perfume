@@ -63,6 +63,27 @@ export async function updateSystemSettingsAction(
     ],
   ];
 
+  // Per-category options, one line per category: "Category: opt1, opt2"
+  const rawLines = String(formData.get("category_options") ?? "")
+    .split("\n")
+    .map((l) => l.trim())
+    .filter(Boolean);
+  const catOpts: Record<string, string[]> = {};
+  for (const line of rawLines) {
+    const idx = line.indexOf(":");
+    if (idx < 1) continue;
+    const cat = line.slice(0, idx).trim();
+    const opts = line
+      .slice(idx + 1)
+      .split(",")
+      .map((o) => o.trim())
+      .filter(Boolean);
+    if (cat && opts.length) catOpts[cat] = opts;
+  }
+  if (Object.keys(catOpts).length) {
+    entries.push(["category_options", JSON.stringify(catOpts)]);
+  }
+
   const upserts = entries
     .filter(([, v]) => v !== "")
     .map(([key, value]) => ({ key, value }));

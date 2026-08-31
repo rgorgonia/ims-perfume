@@ -3,6 +3,7 @@ import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { getSettings, formatMoney } from "@/lib/settings";
+import CategoryFields from "./category-fields";
 
 type Variant = { sku: string; size_ml: number; retail_price: number };
 type Product = {
@@ -67,6 +68,7 @@ export default async function ProductsPage() {
     currencyLocale,
     sizeUnit,
     categories,
+    categoryOptions,
     perfumeFeatures,
   } = await getSettings();
   const money = (n: number) => formatMoney(n, currencySymbol, currencyLocale);
@@ -91,22 +93,7 @@ export default async function ProductsPage() {
         >
           <input name="name" required placeholder="Product name *" className={inputCls} />
           <input name="brand" placeholder="Brand" className={inputCls} />
-          <select name="category" className={inputCls}>
-            {categories.map((c) => (
-              <option key={c} value={c}>
-                {c}
-              </option>
-            ))}
-          </select>
-          {perfumeFeatures && (
-            <select name="concentration" className={inputCls}>
-              <option value="EDT">EDT</option>
-              <option value="EDP">EDP</option>
-              <option value="EXTRAIT">Extrait</option>
-              <option value="EDC">EDC</option>
-              <option value="OIL">Oil</option>
-            </select>
-          )}
+          <CategoryFields categories={categories} options={categoryOptions} />
           <input
             name="sku"
             required
