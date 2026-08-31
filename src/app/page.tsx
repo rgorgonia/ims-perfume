@@ -1,12 +1,9 @@
-import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { requireUser } from "@/lib/auth";
 import { getSettings, formatMoney } from "@/lib/settings";
 import FadeIn from "@/components/fade-in";
 import Ticker from "@/components/ticker";
 
-type SummaryRow = { day: string; revenue: number; cogs: number; profit: number };
-type Store = { id: string; name: string };
 type InvRow = {
   quantity_on_hand: number;
   store_id: string;
@@ -30,38 +27,58 @@ export default async function Dashboard() {
   const { currencySymbol, currencyLocale } = await getSettings();
   const peso = (n: number) => formatMoney(n, currencySymbol, currencyLocale);
 
-  const { data: stores } = await supabase
-    .from("stores")
-    .select("id, name")
-    .order("name");
-
-  const visibleStores = (stores ?? []) as Store[];
-
-  // One RPC round-trip per store (database does the math — see ARCHITECTURE.md §3)
-  const summaries = await Promise.all(
-    visibleStores.map(async (s) => {
-      const { data } = await supabase.rpc("store_sales_summary", {
-        p_store: s.id,
-        p_days: 30,
-      });
-      const rows = (data ?? []) as SummaryRow[];
-      return {
-        store: s,
-        rows,
-        revenue: rows.reduce((a, r) => a + Number(r.revenue), 0),
-        profit: rows.reduce((a, r) => a + Number(r.profit), 0),
-      };
-    })
-  );
-
-  // Low stock: quantity at/below each variant's threshold (filtered in app —
-  // the threshold lives on the variant, not the level row)
-  const { data: inv } = await supabase
-    .from("inventory_levels")
-    .select(
+  // All independent queries run in ONE parallel round-trip batch.
+  // The RPC aggregates every RLS-visible store in a single DB call.
+  const [summaryRes, invRes, salesRes, capitalRes] = await Promise.all([
+    supabase.rpc("store_sales_summary_all", { p_days: 30 }),
+    supabase.from("inventory_levels").select(
       "quantity_on_hand, store_id, product_variants(sku, low_stock_threshold, products(name))"
-    );
-  const lowStock = ((inv ?? []) as unknown as InvRow[])
+    ),
+    supabase
+      .from("sales_transactions")
+      .select("id, total, created_at, stores(name)")
+      .order("created_at", { ascending: false })
+      .limit(8),
+    isAdmin
+      ? supabase.from("capital_ledger").select("amount")
+      : Promise.resolve({ data: null } as { data: { amount: number }[] | null }),
+  ]);
+
+  type AllRow = {
+    store_id: string;
+    store_name: string;
+    day: string;
+    revenue: number;
+    profit: number;
+  };
+  const allRows = (summaryRes.data ?? []) as unknown as AllRow[];
+
+  // Fold per-store per-day rows into store totals + a merged 14-day series
+  const storeMap = new Map<
+    string,
+    { id: string; name: string; revenue: number; profit: number }
+  >();
+  const byDay = new Map<string, number>();
+  for (const r of allRows) {
+    const st =
+      storeMap.get(r.store_id) ??
+      { id: r.store_id, name: r.store_name, revenue: 0, profit: 0 };
+    st.revenue += Number(r.revenue);
+    st.profit += Number(r.profit);
+    storeMap.set(r.store_id, st);
+    const day = String(r.day).slice(0, 10);
+    byDay.set(day, (byDay.get(day) ?? 0) + Number(r.revenue));
+  }
+  const summaries = [...storeMap.values()].sort((a, b) =>
+    a.name.localeCompare(b.name)
+  );
+  const chart = [...byDay.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .slice(-14);
+  const maxDay = Math.max(...chart.map(([, v]) => v), 1);
+
+  // Low stock: quantity at/below each variant's threshold
+  const lowStock = ((invRes.data ?? []) as unknown as InvRow[])
     .filter(
       (r) =>
         r.product_variants &&
@@ -69,41 +86,18 @@ export default async function Dashboard() {
     )
     .slice(0, 8);
 
-  const { data: sales } = await supabase
-    .from("sales_transactions")
-    .select("id, total, created_at, stores(name)")
-    .order("created_at", { ascending: false })
-    .limit(8);
-
+  const sales = (salesRes.data ?? []) as unknown as Sale[];
   // Admin-only: capital ledger is invisible to managers via RLS
-  let capital: number | null = null;
-  if (isAdmin) {
-    const { data } = await supabase
-      .from("capital_ledger")
-      .select("amount");
-    capital = (data ?? []).reduce((a, r) => a + Number(r.amount), 0);
-  }
+  const capital =
+    capitalRes.data === null
+      ? null
+      : (capitalRes.data as { amount: number }[]).reduce(
+          (a, r) => a + Number(r.amount),
+          0
+        );
 
   const totalRevenue = summaries.reduce((a, s) => a + s.revenue, 0);
   const totalProfit = summaries.reduce((a, s) => a + s.profit, 0);
-
-  // Merge per-store daily rows into one 14-day revenue series
-  const byDay = new Map<string, number>();
-  for (const s of summaries) {
-    for (const r of s.rows.slice(-14)) {
-      const day = String(r.day).slice(0, 10);
-      byDay.set(day, (byDay.get(day) ?? 0) + Number(r.revenue));
-    }
-  }
-  const chart = [...byDay.entries()].sort(([a], [b]) => a.localeCompare(b));
-  const maxDay = Math.max(...chart.map(([, v]) => v), 1);
-
-  async function signOut() {
-    "use server";
-    const supabase = await createClient();
-    await supabase.auth.signOut();
-    redirect("/login");
-  }
 
   const statCls =
     "card-lift soft rounded-[18px] border border-neutral-200 p-5 dark:border-white/5";
@@ -146,7 +140,7 @@ export default async function Dashboard() {
         ) : (
           <div className={statCls}>
             <p className="text-xs text-neutral-500">Stores visible</p>
-            <p className="text-xl font-bold">{visibleStores.length}</p>
+            <p className="text-xl font-bold">{summaries.length}</p>
           </div>
         )}
       </section>
@@ -198,8 +192,8 @@ export default async function Dashboard() {
             </thead>
             <tbody>
               {summaries.map((s) => (
-                <tr key={s.store.id} className="border-t border-neutral-200 dark:border-neutral-800">
-                  <td className="px-4 py-2 font-medium">{s.store.name}</td>
+                <tr key={s.id} className="border-t border-neutral-200 dark:border-neutral-800">
+                  <td className="px-4 py-2 font-medium">{s.name}</td>
                   <td className="px-4 py-2 text-right">{peso(s.revenue)}</td>
                   <td className="px-4 py-2 text-right">{peso(s.profit)}</td>
                   <td className="px-4 py-2 text-right">

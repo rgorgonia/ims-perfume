@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 
 export type AppSettings = {
@@ -18,8 +19,9 @@ const DEFAULTS: AppSettings = {
   perfumeFeatures: true,
 };
 
-/** Read the editable system settings, falling back to defaults. Server-side. */
-export async function getSettings(): Promise<AppSettings> {
+/** Read the editable system settings, falling back to defaults. Server-side.
+ *  React cache(): deduped per request (layout + page share one DB read). */
+export const getSettings: () => Promise<AppSettings> = cache(async function () {
   const supabase = await createClient();
   const { data } = await supabase.from("app_settings").select("key, value");
   const map = new Map((data ?? []).map((r) => [r.key, r.value]));
@@ -37,7 +39,7 @@ export async function getSettings(): Promise<AppSettings> {
     categories: cats.length ? cats : DEFAULTS.categories,
     perfumeFeatures: (map.get("perfume_features") ?? "on") !== "off",
   };
-}
+});
 
 /** Format a money amount with the configured currency. */
 export function formatMoney(
