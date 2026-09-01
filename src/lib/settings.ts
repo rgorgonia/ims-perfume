@@ -39,11 +39,13 @@ function getSettingsClient() {
 }
 
 const getCachedSettings = unstable_cache(
-  async (): Promise<Map<string, string>> => {
+  // Plain object (not Map): unstable_cache serializes the return value,
+  // and Map is not JSON-serializable -> would throw at render time.
+  async (): Promise<Record<string, string>> => {
     const { data } = await getSettingsClient()
       .from("app_settings")
       .select("key, value");
-    return new Map(
+    return Object.fromEntries(
       ((data ?? []) as { key: string; value: string }[]).map((r) => [r.key, r.value])
     );
   },
@@ -55,7 +57,7 @@ const getCachedSettings = unstable_cache(
  *  unstable_cache: one DB read per hour max, invalidated via revalidateTag("config")
  *  (config save actions). React cache(): deduped per request. */
 export const getSettings: () => Promise<AppSettings> = cache(async function () {
-  const map = await getCachedSettings();
+  const map = new Map(Object.entries(await getCachedSettings()));
 
   const cats = (map.get("product_categories") ?? "")
     .split(",")
