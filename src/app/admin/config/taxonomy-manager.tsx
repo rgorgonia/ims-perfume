@@ -107,37 +107,42 @@ function CategoryRow({ category }: { category: Category }) {
 
   return (
     <div className="flex w-full flex-wrap items-center gap-2">
-      <span className="rounded-2xl border border-black/[0.08] bg-black/[0.04] px-3 py-1 text-sm dark:border-white/10 dark:bg-white/10">
+      <span
+        className="min-w-0 max-w-full truncate rounded-2xl border border-black/[0.08] bg-black/[0.04] px-3 py-1 text-sm dark:border-white/10 dark:bg-white/10"
+        title={`${category.label} (${category.slug})`}
+      >
         {category.label}
         <span className="ml-1.5 font-mono text-xs text-neutral-500">{category.slug}</span>
         {!category.is_active && (
           <span className="ml-1.5 text-xs text-red-500">inactive</span>
         )}
       </span>
-      <span className="text-xs text-neutral-400">#{category.sort_order}</span>
-      <button type="button" onClick={() => setEditing(true)} className={ghostBtn}>
-        Edit
-      </button>
-      {confirmDelete ? (
-        <>
-          <span className="text-xs text-red-600 dark:text-red-400">
-            Delete category and its attribute definitions?
-          </span>
-          <form action={delAction} className="contents">
-            <input type="hidden" name="category_id" value={category.id} />
-            <button type="submit" disabled={delPending} className={dangerBtn}>
-              {delPending ? "Deleting…" : "Yes, delete"}
-            </button>
-          </form>
-          <button type="button" onClick={() => setConfirmDelete(false)} className={ghostBtn}>
-            Cancel
-          </button>
-        </>
-      ) : (
-        <button type="button" onClick={() => setConfirmDelete(true)} className={dangerBtn}>
-          Delete
+      <span className="shrink-0 text-xs text-neutral-400">#{category.sort_order}</span>
+      <div className="ml-auto flex shrink-0 flex-wrap items-center gap-2">
+        <button type="button" onClick={() => setEditing(true)} className={ghostBtn}>
+          Edit
         </button>
-      )}
+        {confirmDelete ? (
+          <>
+            <span className="text-xs text-red-600 dark:text-red-400">
+              Delete category and its attribute definitions?
+            </span>
+            <form action={delAction} className="contents">
+              <input type="hidden" name="category_id" value={category.id} />
+              <button type="submit" disabled={delPending} className={dangerBtn}>
+                {delPending ? "Deleting…" : "Yes, delete"}
+              </button>
+            </form>
+            <button type="button" onClick={() => setConfirmDelete(false)} className={ghostBtn}>
+              Cancel
+            </button>
+          </>
+        ) : (
+          <button type="button" onClick={() => setConfirmDelete(true)} className={dangerBtn}>
+            Delete
+          </button>
+        )}
+      </div>
       <div className="w-full">
         <Msg state={del} />
       </div>
@@ -227,14 +232,19 @@ export default function TaxonomyManager({ taxonomy }: { taxonomy: Taxonomy }) {
           before a product can be saved.
         </p>
 
-        <div className="mb-6 space-y-4">
+        <div className="mb-6 space-y-3">
           {taxonomy.categories.map((c) => {
             const defs = taxonomy.attributesByCategory[c.slug] ?? [];
             return (
-              <div key={c.id} className="space-y-1">
-                <p className="text-sm font-medium">
-                  {c.label}{" "}
-                  <span className="font-mono text-xs text-neutral-500">
+              <div
+                key={c.id}
+                className="min-w-0 rounded-2xl border border-black/[0.06] p-3 dark:border-white/10"
+              >
+                <p className="mb-1.5 flex min-w-0 items-baseline gap-2 text-sm font-medium">
+                  <span className="min-w-0 truncate" title={c.label}>
+                    {c.label}
+                  </span>
+                  <span className="shrink-0 font-mono text-xs text-neutral-500">
                     ({defs.length} attribute{defs.length === 1 ? "" : "s"})
                   </span>
                 </p>
@@ -252,7 +262,7 @@ export default function TaxonomyManager({ taxonomy }: { taxonomy: Taxonomy }) {
         </div>
         <form
           action={addDefAction}
-          className="grid gap-3 rounded-2xl border border-neutral-200 p-4 sm:grid-cols-2 dark:border-neutral-800"
+          className="grid min-w-0 gap-3 rounded-2xl border border-neutral-200 p-4 [&>div]:min-w-0 sm:grid-cols-2 dark:border-neutral-800"
         >
           <div className="space-y-1">
             <label htmlFor="def_category" className="text-sm font-medium">
@@ -281,7 +291,7 @@ export default function TaxonomyManager({ taxonomy }: { taxonomy: Taxonomy }) {
           <div className="space-y-1">
             <label htmlFor="def_key" className="text-sm font-medium">
               Attribute key{" "}
-              <span className="font-normal text-neutral-500">
+              <span className="font-normal break-words text-neutral-500">
                 — internal name stored on the variant; lowercase letters,
                 numbers, underscores only (e.g. <code>concentration</code>)
               </span>
@@ -299,7 +309,7 @@ export default function TaxonomyManager({ taxonomy }: { taxonomy: Taxonomy }) {
           <div className="space-y-1">
             <label htmlFor="def_type" className="text-sm font-medium">
               Input type{" "}
-              <span className="font-normal text-neutral-500">
+              <span className="font-normal break-words text-neutral-500">
                 — how the field renders on forms
               </span>
             </label>
@@ -314,7 +324,7 @@ export default function TaxonomyManager({ taxonomy }: { taxonomy: Taxonomy }) {
           <div className="space-y-1">
             <label htmlFor="def_options" className="text-sm font-medium">
               Options{" "}
-              <span className="font-normal text-neutral-500">
+              <span className="font-normal break-words text-neutral-500">
                 — for <code>select</code> only, comma-separated (e.g.{" "}
                 <code>EDT, EDP, EXTRAIT</code>)
               </span>
@@ -448,36 +458,41 @@ function DefinitionRow({ def }: { def: CategoryAttributeDefinition }) {
 
   return (
     <div className="flex w-full flex-wrap items-center gap-2">
-      <span className="rounded-2xl bg-neutral-100 px-3 py-1 text-xs dark:bg-neutral-900">
+      <span
+        className="min-w-0 max-w-full truncate rounded-2xl bg-neutral-100 px-3 py-1 text-xs dark:bg-neutral-900"
+        title={`${def.label} · ${def.input_type}${def.required ? " · required" : ""}`}
+      >
         {def.label}
         <span className="font-mono text-neutral-500">
           {" "}· {def.input_type}
           {def.required ? " · required" : ""}
         </span>
       </span>
-      <button type="button" onClick={() => setEditing(true)} className={ghostBtn}>
-        Edit
-      </button>
-      {confirmDelete ? (
-        <>
-          <span className="text-xs text-red-600 dark:text-red-400">
-            Remove this definition?
-          </span>
-          <form action={delAction} className="contents">
-            <input type="hidden" name="definition_id" value={def.id} />
-            <button type="submit" disabled={delPending} className={dangerBtn}>
-              {delPending ? "Deleting…" : "Yes, remove"}
-            </button>
-          </form>
-          <button type="button" onClick={() => setConfirmDelete(false)} className={ghostBtn}>
-            Cancel
-          </button>
-        </>
-      ) : (
-        <button type="button" onClick={() => setConfirmDelete(true)} className={dangerBtn}>
-          ✕
+      <div className="ml-auto flex shrink-0 flex-wrap items-center gap-2">
+        <button type="button" onClick={() => setEditing(true)} className={ghostBtn}>
+          Edit
         </button>
-      )}
+        {confirmDelete ? (
+          <>
+            <span className="text-xs text-red-600 dark:text-red-400">
+              Remove this definition?
+            </span>
+            <form action={delAction} className="contents">
+              <input type="hidden" name="definition_id" value={def.id} />
+              <button type="submit" disabled={delPending} className={dangerBtn}>
+                {delPending ? "Deleting…" : "Yes, remove"}
+              </button>
+            </form>
+            <button type="button" onClick={() => setConfirmDelete(false)} className={ghostBtn}>
+              Cancel
+            </button>
+          </>
+        ) : (
+          <button type="button" onClick={() => setConfirmDelete(true)} className={dangerBtn}>
+            ✕
+          </button>
+        )}
+      </div>
       <div className="w-full">
         <Msg state={del} />
       </div>

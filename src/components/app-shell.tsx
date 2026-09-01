@@ -90,7 +90,7 @@ export default function AppShell({
           <span className="flex h-9 w-9 items-center justify-center rounded-[10px] bg-neutral-900 font-semibold text-white dark:bg-white dark:text-neutral-900">
             {(businessName || "I").trim().charAt(0).toUpperCase()}
           </span>
-          <span className="text-[17px] font-semibold tracking-tight text-neutral-900 dark:text-white">
+          <span className="min-w-0 flex-1 truncate text-[17px] font-semibold tracking-tight text-neutral-900 dark:text-white" title={businessName}>
             {businessName}
           </span>
         </div>
@@ -172,7 +172,11 @@ export default function AppShell({
       </header>
 
       {/* Content */}
-      <div className="pb-24 md:pb-0 md:pl-[18rem]">{children}</div>
+      <div className="min-w-0 pb-24 md:pb-0 md:pl-[18rem]">
+        <main className="mx-auto min-w-0 w-full max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
+          {children}
+        </main>
+      </div>
 
       {/* Mobile bottom nav — icon tabs + More sheet */}
       <div className="fixed inset-x-0 bottom-0 z-40 border-t border-black/[0.08] bg-white/70 pb-[env(safe-area-inset-bottom)] backdrop-blur-2xl backdrop-saturate-150 md:hidden dark:border-white/10 dark:bg-[#1c1c1e]/70">

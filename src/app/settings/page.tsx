@@ -12,7 +12,7 @@ export default async function SettingsPage() {
           Manage your account and preferences
         </p>
       </div>
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid min-w-0 gap-6 lg:grid-cols-2">
         <SettingsForms
           email={user.email}
           fullName={profile?.full_name ?? ""}

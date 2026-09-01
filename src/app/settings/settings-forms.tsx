@@ -66,18 +66,20 @@ export default function SettingsForms({
   }
 
   return (
-    <div className="grid gap-6 lg:grid-cols-2">
+    <div className="grid min-w-0 gap-6 lg:grid-cols-2">
       {/* Account info */}
-      <section className="soft rounded-[18px] p-6">
+      <section className="soft min-w-0 rounded-[18px] p-6">
         <h2 className="mb-4 text-[15px] font-semibold">Account</h2>
         <dl className="space-y-3 text-sm">
-          <div className="flex justify-between gap-4">
-            <dt className="text-neutral-500 dark:text-slate-400">Email</dt>
-            <dd className="font-medium">{email}</dd>
+          <div className="flex items-baseline justify-between gap-4">
+            <dt className="shrink-0 text-neutral-500 dark:text-slate-400">Email</dt>
+            <dd className="min-w-0 truncate font-medium" title={email}>
+              {email}
+            </dd>
           </div>
-          <div className="flex justify-between gap-4">
-            <dt className="text-neutral-500 dark:text-slate-400">Role</dt>
-            <dd className="font-medium">
+          <div className="flex items-baseline justify-between gap-4">
+            <dt className="shrink-0 text-neutral-500 dark:text-slate-400">Role</dt>
+            <dd className="min-w-0 truncate font-medium">
               {role === "system_admin" ? "System Admin" : "Store Manager"}
             </dd>
           </div>
@@ -87,7 +89,7 @@ export default function SettingsForms({
         </p>
       </section>
       {/* Profile name */}
-      <section className="soft rounded-[18px] p-6">
+      <section className="soft min-w-0 rounded-[18px] p-6">
         <h2 className="mb-4 text-[15px] font-semibold">Profile</h2>
         <form className="space-y-4" onSubmit={handleProfile}>
           <div className="space-y-1">
@@ -119,7 +121,7 @@ export default function SettingsForms({
       </section>
 
       {/* Change password */}
-      <section className="soft rounded-[18px] p-6 lg:col-span-2">
+      <section className="soft min-w-0 rounded-[18px] p-6 lg:col-span-2">
         <h2 className="mb-1 text-[15px] font-semibold">Change password</h2>
         <p className="mb-4 text-xs text-neutral-500 dark:text-slate-400">
           Minimum 8 characters. You will stay signed in on this device after changing it.
