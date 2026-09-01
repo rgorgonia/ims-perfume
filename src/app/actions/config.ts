@@ -109,6 +109,101 @@ export async function deleteAttributeDefinitionAction(
   return { success: "Attribute removed" };
 }
 
+/** Update a category's label, sort order, or active state (admins only). */
+export async function updateCategoryAction(
+  _prev: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  const supabase = await requireAdminClient();
+  if (!supabase) return { error: "Admins only" };
+
+  const id = String(formData.get("category_id") ?? "");
+  const label = String(formData.get("label") ?? "").trim();
+  const sortOrder = Number(formData.get("sort_order") ?? 0);
+  const isActive = formData.get("is_active") === "on";
+  if (!id) return { error: "Category id is required" };
+  if (!label) return { error: "Category label is required" };
+
+  const { error } = await supabase
+    .from("product_categories")
+    .update({
+      label,
+      sort_order: Number.isFinite(sortOrder) ? sortOrder : 0,
+      is_active: isActive,
+    })
+    .eq("id", id);
+
+  if (error) return { error: error.message };
+  invalidateConfig();
+  return { success: `Category "${label}" updated` };
+}
+
+/** Delete a category and its attribute definitions (admins only).
+ *  Variants keep their JSONB values but the keys become undeclared. */
+export async function deleteCategoryAction(
+  _prev: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  const supabase = await requireAdminClient();
+  if (!supabase) return { error: "Admins only" };
+
+  const id = String(formData.get("category_id") ?? "");
+  if (!id) return { error: "Category id is required" };
+
+  const { error } = await supabase
+    .from("product_categories")
+    .delete()
+    .eq("id", id);
+
+  if (error) return { error: error.message };
+  invalidateConfig();
+  return { success: "Category deleted" };
+}
+
+/** Update an attribute definition (admins only). */
+export async function updateAttributeDefinitionAction(
+  _prev: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  const supabase = await requireAdminClient();
+  if (!supabase) return { error: "Admins only" };
+
+  const id = String(formData.get("definition_id") ?? "");
+  if (!id) return { error: "Definition id is required" };
+
+  const label = String(formData.get("label") ?? "").trim();
+  const inputType = String(formData.get("input_type") ?? "") as AttributeInputType;
+  const required = formData.get("required") === "on";
+  const sortOrder = Number(formData.get("sort_order") ?? 0);
+  if (!label) return { error: "Label is required" };
+  if (!INPUT_TYPES.includes(inputType)) return { error: "Invalid input type" };
+
+  let options: string[] | null = null;
+  if (inputType === "select") {
+    options = String(formData.get("options") ?? "")
+      .split(",")
+      .map((o) => o.trim())
+      .filter(Boolean);
+    if (options.length === 0)
+      return { error: "Select attributes need at least one option (comma-separated)" };
+  }
+
+  const { error } = await supabase
+    .from("category_attribute_definitions")
+    .update({
+      label,
+      input_type: inputType,
+      options,
+      required,
+      sort_order: Number.isFinite(sortOrder) ? sortOrder : 0,
+    })
+    .eq("id", id);
+
+  if (error) return { error: error.message };
+  invalidateConfig();
+  return { success: `Attribute "${label}" updated` };
+}
+
 /** Add a new product category (admins only). */
 export async function addCategoryAction(
   _prev: ActionState,

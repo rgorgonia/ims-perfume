@@ -1,18 +1,153 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import {
   addCategoryAction,
+  updateCategoryAction,
+  deleteCategoryAction,
   addAttributeDefinitionAction,
+  updateAttributeDefinitionAction,
   deleteAttributeDefinitionAction,
 } from "@/app/actions/config";
-import type { Taxonomy } from "@/lib/services/taxonomy";
+import type {
+  Taxonomy,
+  Category,
+  CategoryAttributeDefinition,
+  AttributeInputType,
+} from "@/lib/services/taxonomy";
 
 type ActionState = { error?: string; success?: string };
 const EMPTY: ActionState = {};
 
 const inputCls =
   "rounded-[10px] border border-black/10 bg-white/60 px-3 py-2 text-sm text-neutral-900 outline-none focus:border-neutral-500/60 focus:ring-2 focus:ring-neutral-400/40 dark:border-white/10 dark:bg-white/5 dark:text-white";
+
+const btnCls =
+  "rounded-full px-3 py-1.5 text-xs font-medium transition-opacity hover:opacity-80 disabled:opacity-50";
+const primaryBtn = `btn-neon ${btnCls}`;
+const ghostBtn =
+  "rounded-full border border-black/[0.08] px-3 py-1.5 text-xs font-medium text-neutral-600 hover:bg-black/[0.05] dark:border-white/10 dark:text-slate-300 dark:hover:bg-white/10";
+const dangerBtn =
+  "rounded-full border border-red-200 px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 dark:border-red-900 dark:text-red-400 dark:hover:bg-red-950";
+
+const INPUT_TYPES: AttributeInputType[] = [
+  "select",
+  "text",
+  "number",
+  "boolean",
+  "date",
+];
+
+function Msg({ state }: { state: ActionState }) {
+  if (!state.error && !state.success) return null;
+  return (
+    <p
+      className={`text-xs ${
+        state.error
+          ? "text-red-600 dark:text-red-400"
+          : "text-emerald-600 dark:text-emerald-400"
+      }`}
+    >
+      {state.error ?? state.success}
+    </p>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Category row — inline edit + two-click delete                       */
+/* ------------------------------------------------------------------ */
+
+function CategoryRow({ category }: { category: Category }) {
+  const [editing, setEditing] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [upd, updAction, updPending] = useActionState(updateCategoryAction, EMPTY);
+  const [del, delAction, delPending] = useActionState(deleteCategoryAction, EMPTY);
+
+  if (editing) {
+    return (
+      <form
+        action={updAction}
+        className="flex w-full flex-wrap items-end gap-2 rounded-2xl border border-black/10 p-3 dark:border-white/10"
+      >
+        <input type="hidden" name="category_id" value={category.id} />
+        <div className="space-y-0.5">
+          <label className="text-xs font-medium">Label</label>
+          <input name="label" required defaultValue={category.label} className={inputCls} />
+        </div>
+        <div className="space-y-0.5">
+          <label className="text-xs font-medium">Sort order</label>
+          <input
+            name="sort_order"
+            type="number"
+            defaultValue={category.sort_order}
+            className={`${inputCls} w-20`}
+          />
+        </div>
+        <label className="flex items-center gap-1.5 pb-2 text-xs font-medium">
+          <input
+            type="checkbox"
+            name="is_active"
+            defaultChecked={category.is_active}
+            className="h-4 w-4"
+          />
+          Active
+        </label>
+        <button type="submit" disabled={updPending} className={primaryBtn}>
+          {updPending ? "Saving…" : "Save"}
+        </button>
+        <button type="button" onClick={() => setEditing(false)} className={ghostBtn}>
+          Cancel
+        </button>
+        <div className="w-full">
+          <Msg state={upd} />
+        </div>
+      </form>
+    );
+  }
+
+  return (
+    <div className="flex w-full flex-wrap items-center gap-2">
+      <span className="rounded-2xl border border-black/[0.08] bg-black/[0.04] px-3 py-1 text-sm dark:border-white/10 dark:bg-white/10">
+        {category.label}
+        <span className="ml-1.5 font-mono text-xs text-neutral-500">{category.slug}</span>
+        {!category.is_active && (
+          <span className="ml-1.5 text-xs text-red-500">inactive</span>
+        )}
+      </span>
+      <span className="text-xs text-neutral-400">#{category.sort_order}</span>
+      <button type="button" onClick={() => setEditing(true)} className={ghostBtn}>
+        Edit
+      </button>
+      {confirmDelete ? (
+        <>
+          <span className="text-xs text-red-600 dark:text-red-400">
+            Delete category and its attribute definitions?
+          </span>
+          <form action={delAction} className="contents">
+            <input type="hidden" name="category_id" value={category.id} />
+            <button type="submit" disabled={delPending} className={dangerBtn}>
+              {delPending ? "Deleting…" : "Yes, delete"}
+            </button>
+          </form>
+          <button type="button" onClick={() => setConfirmDelete(false)} className={ghostBtn}>
+            Cancel
+          </button>
+        </>
+      ) : (
+        <button type="button" onClick={() => setConfirmDelete(true)} className={dangerBtn}>
+          Delete
+        </button>
+      )}
+      <div className="w-full">
+        <Msg state={del} />
+      </div>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Main manager                                                        */
+/* ------------------------------------------------------------------ */
 
 export default function TaxonomyManager({ taxonomy }: { taxonomy: Taxonomy }) {
   const [addCat, addCatAction, addCatPending] = useActionState(
@@ -21,10 +156,6 @@ export default function TaxonomyManager({ taxonomy }: { taxonomy: Taxonomy }) {
   );
   const [addDef, addDefAction, addDefPending] = useActionState(
     addAttributeDefinitionAction,
-    EMPTY
-  );
-  const [delDef, delDefAction, delDefPending] = useActionState(
-    deleteAttributeDefinitionAction,
     EMPTY
   );
 
@@ -43,33 +174,37 @@ export default function TaxonomyManager({ taxonomy }: { taxonomy: Taxonomy }) {
             <code>Concentration</code> with options <code>EDT, EDP</code>) —
             these become the extra fields on every product/variant form.
           </li>
+          <li>
+            Edit any category to rename it, reorder it, or deactivate it
+            (deactivated categories keep their data but disappear from forms).
+          </li>
         </ol>
-        <p className="mb-4 text-xs text-neutral-500 dark:text-slate-400">
-          Categories currently defined — the label is shown to users, the slug
-          is the internal identifier:
-        </p>
-        <div className="mb-4 flex flex-wrap gap-2">
+
+        <div className="mb-4 space-y-2">
           {taxonomy.categories.map((c) => (
-            <span
-              key={c.id}
-              className="rounded-2xl border border-black/[0.08] bg-black/[0.04] px-3 py-1 text-sm dark:border-white/10 dark:bg-white/10"
-            >
-              {c.label}
-              <span className="ml-1.5 font-mono text-xs text-neutral-500">
-                {c.slug}
-              </span>
-            </span>
+            <CategoryRow key={c.id} category={c} />
           ))}
           {taxonomy.categories.length === 0 && (
-            <span className="text-sm text-neutral-500">No categories yet.</span>
+            <p className="text-sm text-neutral-500">
+              No categories yet — add your first one below.
+            </p>
           )}
         </div>
-        <form action={addCatAction} className="flex flex-wrap gap-3">
+
+        <form action={addCatAction} className="flex flex-wrap items-center gap-3">
           <input
             name="label"
             required
-            placeholder="New category label *"
+            placeholder="New category label (e.g. Fragrance) *"
             className={inputCls}
+          />
+          <input
+            name="sort_order"
+            type="number"
+            defaultValue={0}
+            aria-label="Sort order"
+            title="Sort order — lower numbers appear first"
+            className={`${inputCls} w-24`}
           />
           <button
             type="submit"
@@ -78,20 +213,9 @@ export default function TaxonomyManager({ taxonomy }: { taxonomy: Taxonomy }) {
           >
             {addCatPending ? "Adding…" : "Add category"}
           </button>
-          {(addCat.error || addCat.success) && (
-            <p
-              className={`self-center text-sm ${
-                addCat.error
-                  ? "text-red-600 dark:text-red-400"
-                  : "text-emerald-600 dark:text-emerald-400"
-              }`}
-            >
-              {addCat.error ?? addCat.success}
-            </p>
-          )}
+          <Msg state={addCat} />
         </form>
       </section>
-
       {/* ------------------------------------ Attribute definitions */}
       <section className="soft rounded-[18px] p-6">
         <h2 className="mb-1 text-[15px] font-semibold">Attribute definitions</h2>
@@ -107,34 +231,19 @@ export default function TaxonomyManager({ taxonomy }: { taxonomy: Taxonomy }) {
           {taxonomy.categories.map((c) => {
             const defs = taxonomy.attributesByCategory[c.slug] ?? [];
             return (
-              <div key={c.id}>
-                <p className="mb-1 text-sm font-medium">
+              <div key={c.id} className="space-y-1">
+                <p className="text-sm font-medium">
                   {c.label}{" "}
                   <span className="font-mono text-xs text-neutral-500">
                     ({defs.length} attribute{defs.length === 1 ? "" : "s"})
                   </span>
                 </p>
-                <div className="flex flex-wrap gap-2">
+                <div className="space-y-1">
                   {defs.map((d) => (
-                    <form key={d.id} action={delDefAction} className="contents">
-                      <input type="hidden" name="definition_id" value={d.id} />
-                      <button
-                        type="submit"
-                        disabled={delDefPending}
-                        title="Remove definition"
-                        className="rounded-2xl bg-neutral-100 px-3 py-1 text-xs hover:bg-red-100 disabled:opacity-50 dark:bg-neutral-900 dark:hover:bg-red-950"
-                      >
-                        {d.label}
-                        <span className="font-mono">
-                          {" "}· {d.input_type}
-                          {d.required ? " · required" : ""}
-                        </span>{" "}
-                        ✕
-                      </button>
-                    </form>
+                    <DefinitionRow key={d.id} def={d} />
                   ))}
                   {defs.length === 0 && (
-                    <span className="text-xs text-neutral-500">None</span>
+                    <span className="text-xs text-neutral-500">None yet</span>
                   )}
                 </div>
               </div>
@@ -236,17 +345,9 @@ export default function TaxonomyManager({ taxonomy }: { taxonomy: Taxonomy }) {
             </div>
           </div>
           <div className="sm:col-span-2">
-            {(addDef.error || addDef.success || delDef.error) && (
-              <p
-                className={`mb-3 text-sm ${
-                  addDef.error || delDef.error
-                    ? "text-red-600 dark:text-red-400"
-                    : "text-emerald-600 dark:text-emerald-400"
-                }`}
-              >
-                {addDef.error ?? delDef.error ?? addDef.success}
-              </p>
-            )}
+            <div className="mb-3">
+              <Msg state={addDef} />
+            </div>
             <button
               type="submit"
               disabled={addDefPending || taxonomy.categories.length === 0}
@@ -257,6 +358,129 @@ export default function TaxonomyManager({ taxonomy }: { taxonomy: Taxonomy }) {
           </div>
         </form>
       </section>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Attribute definition row — inline edit + two-click delete           */
+/* ------------------------------------------------------------------ */
+
+function DefinitionRow({ def }: { def: CategoryAttributeDefinition }) {
+  const [editing, setEditing] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [inputType, setInputType] = useState<AttributeInputType>(def.input_type);
+  const [upd, updAction, updPending] = useActionState(
+    updateAttributeDefinitionAction,
+    EMPTY
+  );
+  const [del, delAction, delPending] = useActionState(
+    deleteAttributeDefinitionAction,
+    EMPTY
+  );
+
+  if (editing) {
+    return (
+      <form
+        action={updAction}
+        className="w-full space-y-2 rounded-2xl border border-black/10 p-3 dark:border-white/10"
+      >
+        <input type="hidden" name="definition_id" value={def.id} />
+        <div className="flex flex-wrap items-end gap-2">
+          <div className="space-y-0.5">
+            <label className="text-xs font-medium">Label</label>
+            <input name="label" required defaultValue={def.label} className={inputCls} />
+          </div>
+          <div className="space-y-0.5">
+            <label className="text-xs font-medium">Input type</label>
+            <select
+              name="input_type"
+              value={inputType}
+              onChange={(e) => setInputType(e.target.value as AttributeInputType)}
+              className={inputCls}
+            >
+              {INPUT_TYPES.map((t) => (
+                <option key={t} value={t}>
+                  {t}
+                </option>
+              ))}
+            </select>
+          </div>
+          {inputType === "select" && (
+            <div className="space-y-0.5">
+              <label className="text-xs font-medium">Options (comma-separated)</label>
+              <input
+                name="options"
+                defaultValue={(def.options ?? []).join(", ")}
+                className={inputCls}
+              />
+            </div>
+          )}
+          <div className="space-y-0.5">
+            <label className="text-xs font-medium">Sort order</label>
+            <input
+              name="sort_order"
+              type="number"
+              defaultValue={def.sort_order}
+              className={`${inputCls} w-20`}
+            />
+          </div>
+          <label className="flex items-center gap-1.5 pb-2 text-xs font-medium">
+            <input
+              type="checkbox"
+              name="required"
+              defaultChecked={def.required}
+              className="h-4 w-4"
+            />
+            Required
+          </label>
+          <button type="submit" disabled={updPending} className={primaryBtn}>
+            {updPending ? "Saving…" : "Save"}
+          </button>
+          <button type="button" onClick={() => setEditing(false)} className={ghostBtn}>
+            Cancel
+          </button>
+        </div>
+        <Msg state={upd} />
+      </form>
+    );
+  }
+
+  return (
+    <div className="flex w-full flex-wrap items-center gap-2">
+      <span className="rounded-2xl bg-neutral-100 px-3 py-1 text-xs dark:bg-neutral-900">
+        {def.label}
+        <span className="font-mono text-neutral-500">
+          {" "}· {def.input_type}
+          {def.required ? " · required" : ""}
+        </span>
+      </span>
+      <button type="button" onClick={() => setEditing(true)} className={ghostBtn}>
+        Edit
+      </button>
+      {confirmDelete ? (
+        <>
+          <span className="text-xs text-red-600 dark:text-red-400">
+            Remove this definition?
+          </span>
+          <form action={delAction} className="contents">
+            <input type="hidden" name="definition_id" value={def.id} />
+            <button type="submit" disabled={delPending} className={dangerBtn}>
+              {delPending ? "Deleting…" : "Yes, remove"}
+            </button>
+          </form>
+          <button type="button" onClick={() => setConfirmDelete(false)} className={ghostBtn}>
+            Cancel
+          </button>
+        </>
+      ) : (
+        <button type="button" onClick={() => setConfirmDelete(true)} className={dangerBtn}>
+          ✕
+        </button>
+      )}
+      <div className="w-full">
+        <Msg state={del} />
+      </div>
     </div>
   );
 }
