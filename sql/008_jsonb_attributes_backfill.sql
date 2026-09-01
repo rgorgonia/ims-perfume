@@ -12,9 +12,16 @@ create or replace view public.variant_public_view as
 -- 2. Backfill: legacy products.concentration → variants.attributes.concentration,
 --    only where a 'concentration' definition exists for the product's category
 --    (the validation trigger would otherwise reject undeclared keys).
+--    Skipped when products.category doesn't exist yet (run 003 first).
 do $$
 begin
-  if to_regclass('public.category_attribute_definitions') is not null then
+  if to_regclass('public.category_attribute_definitions') is not null
+     and exists (
+       select 1 from information_schema.columns
+       where table_schema = 'public'
+         and table_name = 'products'
+         and column_name = 'category'
+     ) then
     update public.product_variants v
     set attributes = coalesce(v.attributes, '{}'::jsonb)
                      || jsonb_build_object('concentration', p.concentration)
