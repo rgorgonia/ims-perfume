@@ -143,9 +143,11 @@ function CategoryRow({ category }: { category: Category }) {
           </button>
         )}
       </div>
-      <div className="w-full">
-        <Msg state={del} />
-      </div>
+      {(del.error || del.success) && (
+        <div className="w-full">
+          <Msg state={del} />
+        </div>
+      )}
     </div>
   );
 }
@@ -505,9 +507,11 @@ function DefinitionRow({ def }: { def: CategoryAttributeDefinition }) {
           </button>
         )}
       </div>
-      <div className="w-full">
-        <Msg state={del} />
-      </div>
+      {(del.error || del.success) && (
+        <div className="w-full">
+          <Msg state={del} />
+        </div>
+      )}
     </div>
   );
 }
