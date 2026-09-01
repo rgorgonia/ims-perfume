@@ -108,33 +108,52 @@ create policy "attr_defs_admin_write"
 -- ------------------------------------------------------------
 -- 6. Backfill from legacy app_settings (string categories + options map)
 -- ------------------------------------------------------------
-insert into public.product_categories (slug, label, sort_order)
-select
-  lower(regexp_replace(trim(cat), '[^a-z0-9]+', '-', 'gi')),
-  trim(cat),
-  ord
-from (
-  select row_number() over () as ord, trim(cat) as cat
-  from unnest(string_to_array(
-    coalesce((select value from public.app_settings where key = 'product_categories'), ''),
-    ','
-  )) as cat
-  where trim(cat) <> ''
-) s
-on conflict (slug) do nothing;
+-- Backfill only applies if the legacy app_settings table exists
+-- (fresh databases have nothing to migrate).
+do $$
+begin
+  if to_regclass('public.app_settings') is not null then
+    insert into public.product_categories (slug, label, sort_order)
+    select
+      lower(regexp_replace(trim(cat), '[^a-z0-9]+', '-', 'gi')),
+      trim(cat),
+      ord
+    from (
+      select row_number() over () as ord, trim(cat) as cat
+      from unnest(string_to_array(
+        coalesce((select value from public.app_settings where key = 'product_categories'), ''),
+        ','
+      )) as cat
+      where trim(cat) <> ''
+    ) s
+    on conflict (slug) do nothing;
 
--- category_options: {"Fragrance": ["EDT","EDP"]} → select attribute per category
-insert into public.category_attribute_definitions
-  (category_id, attribute_key, label, input_type, options, sort_order)
-select c.id, 'concentration', 'Concentration', 'select', s.value::jsonb, 0
-from public.app_settings s
-join public.product_categories
-  c on c.slug = lower(regexp_replace(trim(s.key), '[^a-z0-9]+', '-', 'gi'))
-where s.key = 'category_options'
-  and jsonb_typeof(s.value::jsonb) = 'array'
-on conflict (category_id, attribute_key) do nothing;
+    -- category_options: {"Fragrance": ["EDT","EDP"]} → one select
+    -- attribute per category, iterating over the JSONB map keys
+    insert into public.category_attribute_definitions
+      (category_id, attribute_key, label, input_type, options, sort_order)
+    select c.id, 'concentration', 'Concentration', 'select', opt.value, 0
+    from public.app_settings s,
+         jsonb_each(s.value::jsonb) as opt(label, value)
+    join public.product_categories
+      c on c.slug = lower(regexp_replace(trim(opt.label), '[^a-z0-9]+', '-', 'gi'))
+    where s.key = 'category_options'
+      and jsonb_typeof(s.value::jsonb) = 'object'
+      and jsonb_typeof(opt.value) = 'array'
+    on conflict (category_id, attribute_key) do nothing;
+  end if;
+end $$;
 
 -- app_settings holds only public catalog config (branding/currency) —
 -- readable by anon so unstable_cache can fetch without a user session.
-create policy "settings_read_public"
-  on public.app_settings for select using (true);
+-- (Skipped on fresh databases where app_settings doesn't exist yet.)
+do $$
+begin
+  if to_regclass('public.app_settings') is not null
+     and not exists (
+       select 1 from pg_policies
+       where tablename = 'app_settings' and policyname = 'settings_read_public'
+     ) then
+    execute 'create policy "settings_read_public" on public.app_settings for select using (true)';
+  end if;
+end $$;

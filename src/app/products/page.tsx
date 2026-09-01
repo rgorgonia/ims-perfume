@@ -3,9 +3,15 @@ import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { getSettings, formatMoney } from "@/lib/settings";
-import CategoryFields from "./category-fields";
+import { getTaxonomy } from "@/lib/services/taxonomy";
+import { parseVariantAttributes } from "@/lib/attributes";
+import CategoryAttributeFields from "@/components/category-attribute-fields";
 
-type Variant = { sku: string; size_ml: number; retail_price: number };
+type Variant = {
+  sku: string;
+  size_ml: number;
+  retail_price: number;
+};
 type Product = {
   id: string;
   name: string;
@@ -25,7 +31,6 @@ async function createProduct(formData: FormData) {
   const name = String(formData.get("name") ?? "").trim();
   const brand = String(formData.get("brand") ?? "").trim();
   const category = String(formData.get("category") ?? "").trim();
-  const concentration = String(formData.get("concentration") ?? "").trim();
   const retailPrice = Number(formData.get("retail_price") ?? 0);
   const sizeMl = Number(formData.get("size_ml") ?? 0);
   const sku = String(formData.get("sku") ?? "").trim();
@@ -34,13 +39,20 @@ async function createProduct(formData: FormData) {
 
   if (!name || !sku || !sizeMl) return;
 
+  // Dynamic attributes from the taxonomy-generated fields (JSONB on the variant).
+  const taxonomy = await getTaxonomy();
+  const attributes = parseVariantAttributes(formData, taxonomy, category);
+
   const { data: product, error } = await supabase
     .from("products")
     .insert({
       name,
       brand: brand || null,
       category: category || null,
-      ...(concentration ? { concentration } : {}),
+      // Dual-write legacy column while the transition is in progress
+      ...(typeof attributes.concentration === "string"
+        ? { concentration: attributes.concentration }
+        : {}),
       cost_price: costPrice,
       retail_price: retailPrice,
     })
@@ -54,6 +66,7 @@ async function createProduct(formData: FormData) {
     size_ml: sizeMl,
     cost_price: costPrice,
     retail_price: retailPrice,
+    attributes,
   });
 
   revalidatePath("/products");
@@ -63,14 +76,8 @@ export default async function ProductsPage() {
   const session = await requireUser();
   const isAdmin = session.profile?.role === "system_admin";
   const supabase = await createClient();
-  const {
-    currencySymbol,
-    currencyLocale,
-    sizeUnit,
-    categories,
-    categoryOptions,
-    perfumeFeatures,
-  } = await getSettings();
+  const { currencySymbol, currencyLocale, sizeUnit } = await getSettings();
+  const taxonomy = await getTaxonomy();
   const money = (n: number) => formatMoney(n, currencySymbol, currencyLocale);
 
   const { data: products } = await supabase
@@ -93,7 +100,7 @@ export default async function ProductsPage() {
         >
           <input name="name" required placeholder="Product name *" className={inputCls} />
           <input name="brand" placeholder="Brand" className={inputCls} />
-          <CategoryFields categories={categories} options={categoryOptions} />
+          <CategoryAttributeFields taxonomy={taxonomy} />
           <input
             name="sku"
             required
@@ -144,7 +151,7 @@ export default async function ProductsPage() {
                 <th className="px-4 py-2">Product</th>
                 <th className="px-4 py-2">Brand</th>
                 <th className="px-4 py-2">Category</th>
-                {perfumeFeatures && <th className="px-4 py-2">Concentration</th>}
+                <th className="px-4 py-2">Concentration</th>
                 <th className="px-4 py-2">Variants</th>
                 <th className="px-4 py-2">Retail</th>
               </tr>
@@ -158,8 +165,12 @@ export default async function ProductsPage() {
                     </Link>
                   </td>
                   <td className="px-4 py-2">{p.brand ?? "—"}</td>
-                  <td className="px-4 py-2">{p.category ?? "—"}</td>
-                  {perfumeFeatures && <td className="px-4 py-2">{p.concentration ?? "—"}</td>}
+                  <td className="px-4 py-2">
+                    {taxonomy.categories.find((c) => c.slug === p.category)?.label ??
+                      p.category ??
+                      "—"}
+                  </td>
+                  <td className="px-4 py-2">{p.concentration ?? "—"}</td>
                   <td className="px-4 py-2">
                     {(p.product_variants ?? [])
                       .map((v) => `${v.sku} (${v.size_ml}${sizeUnit})`)
@@ -170,7 +181,7 @@ export default async function ProductsPage() {
               ))}
               {(products ?? []).length === 0 && (
                 <tr>
-                  <td colSpan={perfumeFeatures ? 6 : 5} className="px-4 py-6 text-center text-neutral-500">
+                  <td colSpan={6} className="px-4 py-6 text-center text-neutral-500">
                     No products yet.
                   </td>
                 </tr>

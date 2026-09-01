@@ -4,6 +4,9 @@ import { notFound } from "next/navigation";
 import { requireUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { getSettings, formatMoney } from "@/lib/settings";
+import { getTaxonomy } from "@/lib/services/taxonomy";
+import { parseVariantAttributes } from "@/lib/attributes";
+import CategoryAttributeFields from "@/components/category-attribute-fields";
 
 type Variant = {
   id: string;
@@ -12,6 +15,7 @@ type Variant = {
   variant_type: string;
   retail_price: number;
   low_stock_threshold: number;
+  attributes: Record<string, string | number | boolean> | null;
 };
 type Note = { id: string; note_type: string; note_name: string };
 type Batch = {
@@ -33,6 +37,20 @@ async function addVariant(formData: FormData) {
   if (!productId || !sku || !sizeMl) return;
 
   const supabase = await createClient();
+  const { data: product } = await supabase
+    .from("products")
+    .select("category")
+    .eq("id", productId)
+    .single();
+
+  // Dynamic attributes from the taxonomy-generated fields (JSONB on the variant).
+  const taxonomy = await getTaxonomy();
+  const attributes = parseVariantAttributes(
+    formData,
+    taxonomy,
+    product?.category ?? ""
+  );
+
   const { error } = await supabase.from("product_variants").insert({
     product_id: productId,
     sku,
@@ -40,6 +58,7 @@ async function addVariant(formData: FormData) {
     variant_type: variantType,
     retail_price: retailPrice,
     low_stock_threshold: threshold || 5,
+    attributes,
   });
   if (!error) revalidatePath(`/products/${productId}`);
 }
@@ -100,12 +119,8 @@ export default async function ProductPage({
   const { id } = await params;
   await requireUser();
   const supabase = await createClient();
-  const {
-    currencySymbol,
-    currencyLocale,
-    sizeUnit,
-    perfumeFeatures,
-  } = await getSettings();
+  const { currencySymbol, currencyLocale, sizeUnit } = await getSettings();
+  const taxonomy = await getTaxonomy();
   const money = (n: number) => formatMoney(n, currencySymbol, currencyLocale);
 
   const { data: product } = await supabase
@@ -150,8 +165,10 @@ export default async function ProductPage({
           {product.brand ? ` — ${product.brand}` : ""}
         </h1>
         <p className="text-sm text-neutral-600 dark:text-neutral-400">
-          {perfumeFeatures && product.concentration ? `${product.concentration} · ` : ""}
-          {product.category ? `${product.category} · ` : ""}
+          {product.concentration ? `${product.concentration} · ` : ""}
+          {product.category
+            ? `${taxonomy.categories.find((c) => c.slug === product.category)?.label ?? product.category} · `
+            : ""}
           Retail {money(Number(product.retail_price))}
         </p>
       </header>
@@ -163,6 +180,15 @@ export default async function ProductPage({
             <li key={v.id} className="flex justify-between">
               <span>
                 {v.sku} — {v.size_ml}{sizeUnit} {v.variant_type}
+                {v.attributes &&
+                  Object.entries(v.attributes).length > 0 && (
+                    <span className="text-neutral-500">
+                      {" · "}
+                      {Object.entries(v.attributes)
+                        .map(([, val]) => String(val))
+                        .join(" · ")}
+                    </span>
+                  )}
               </span>
               <span>{money(Number(v.retail_price))}</span>
             </li>
@@ -180,13 +206,14 @@ export default async function ProductPage({
           </select>
           <input name="retail_price" type="number" step="0.01" min="0" placeholder="Retail price" className={inputCls} />
           <input name="low_stock_threshold" type="number" min="0" placeholder="Low-stock threshold" className={inputCls} />
-          <button type="submit" className="rounded-2xl btn-neon px-4 py-2 text-sm font-medium hover:opacity-80">
+          <CategoryAttributeFields taxonomy={taxonomy} initialCategory={product.category ?? ""} />
+          <button type="submit" className="rounded-2xl btn-neon px-4 py-2 text-sm font-medium hover:opacity-80 sm:col-span-3">
             Add variant
           </button>
         </form>
       </section>
 
-      {perfumeFeatures && (
+      {product.category === "fragrance" && (
       <section className="space-y-3">
         <h2 className="text-lg font-semibold">Scent profile</h2>
         <div className="grid gap-3 sm:grid-cols-3">

@@ -32,21 +32,24 @@ Mutations (sales, settings, users…) = Server Actions
 
 Roles: `system_admin` (everything) / `store_manager` (own store: sell + stock).
 
-## 3. Configuration System (business-agnostic)
+## 3. Configuration System
 
 ```
-app_settings (key/value — admins write, all signed-in read; 1 deduped read/request)
+app_settings (key/value — admins write, all signed-in read)
   ├─ business_name ─────────→ sidebar brand, tab title, logo letter
   ├─ currency_symbol/locale → every money display
-  ├─ size_unit ─────────────→ all size labels/inputs
-  ├─ product_categories ───→ master category list (chip editor in Settings)
-  ├─ category_options ─────→ per-category 2nd dropdown (e.g. Fragrance: EDT, EDP…)
-  └─ perfume_features ─────→ toggles concentration/scent-note UI globally
-stores.categories (text[]) → per-store subset of master list (NULL = all)
+  └─ size_unit ─────────────→ all size labels/inputs
+product_categories (rows) → master taxonomy (slug/label/sort)
+category_attribute_definitions → per-category variant attribute schema
+product_variants.attributes (JSONB + GIN) → dynamic attribute values,
+  validated by trg_validate_variant_attributes (declared keys + required)
+stores.categories (text[]) → per-store subset (NULL = all)
 ```
 
-- Settings → System panel (admins only) edits all of the above
-- Category-driven dropdown: picking a category on Add Product swaps the options client-side
+- System panel lives at `/admin/config` (admins only) with the Taxonomy manager
+- Cached taxonomy service (`src/lib/services/taxonomy.ts`, tag: `taxonomy`)
+- Product/variant forms generate fields from the taxonomy at runtime;
+  values persist to `variants.attributes` (legacy `concentration` dual-written)
 - Sales form filters the variant dropdown to the selected store's categories
 
 ## 4. Data Model & Write Flows
@@ -81,7 +84,8 @@ low-stock list.
 | `/stores` | admin | Stores + categories sold |
 | `/users` | admin | Register/reset/disable users |
 | `/capital` | admin | Capital ledger |
-| `/settings` | signed-in | Profile, password; System panel (admin) |
+| `/admin/config` | admin | System settings + taxonomy (categories & attribute definitions) |
+| `/settings` | signed-in | Profile, password (personal only) |
 
 Navigation: floating glass sidebar (desktop) / bottom bar + More sheet (mobile).
 
@@ -93,11 +97,13 @@ Navigation: floating glass sidebar (desktop) / bottom bar + More sheet (mobile).
 | Production | same project | Vercel env vars; domain `inventory.ronaldqa.dev` |
 
 SQL migrations run in order: `001_schema` → `002_rls_policies` → `003_settings` →
-`004_dashboard_rpc` → `005_category_options` → `006_store_categories`.
+`004_dashboard_rpc` → `005_category_options` → `006_store_categories` →
+`007_dynamic_taxonomy_refactor` → `008_jsonb_attributes_backfill`.
 
 ## 7. Known Gaps
 
 - Stock-in form (admin) not yet filtered by store categories
 - Store categories are create-only (no edit UI yet)
 - No forced password change on first login / after reset (`password123` default)
+- Legacy columns (`products.concentration`, `product_variants.size_ml`, `category_options`) still populated — drop after QA pipeline (roadmap Phase 7)
 - No E2E tests / CI / RLS regression tests yet
