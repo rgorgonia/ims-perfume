@@ -96,7 +96,7 @@ export default async function SalesPage() {
     ]);
 
   return (
-    <div className="mx-auto max-w-5xl space-y-8 p-8">
+    <div className="mx-auto max-w-5xl space-y-8 py-6 sm:py-8">
       <section className="space-y-4">
         <h1 className="text-2xl font-bold">Record sale</h1>
         <p className="text-sm text-neutral-600 dark:text-neutral-400">

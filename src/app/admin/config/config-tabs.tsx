@@ -24,7 +24,7 @@ export default function ConfigTabs({
       <div
         role="tablist"
         aria-label="Configuration sections"
-        className="inline-flex gap-1 rounded-full border border-black/[0.08] bg-white/60 p-1 dark:border-white/10 dark:bg-white/5"
+        className="flex flex-wrap gap-1 rounded-full border border-black/[0.08] bg-white/60 p-1 dark:border-white/10 dark:bg-white/5"
       >
         {TABS.map(({ key, label, icon: Icon }) => (
           <button

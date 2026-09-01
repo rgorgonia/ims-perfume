@@ -34,7 +34,7 @@ export default async function UsersPage({
   ]);
 
   return (
-    <div className="mx-auto max-w-5xl space-y-8 p-8">
+    <div className="mx-auto max-w-5xl space-y-8 py-6 sm:py-8">
       {reset && (
         <div className="rounded-2xl border border-emerald-300 bg-emerald-50 p-4 text-sm text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-200">
           Password for <span className="font-semibold">{reset}</span> has been

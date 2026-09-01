@@ -63,7 +63,7 @@ export default async function CapitalPage() {
     "rounded-[10px] border border-black/10 px-3 py-2 text-sm dark:border-neutral-700 dark:bg-transparent";
 
   return (
-    <div className="mx-auto max-w-4xl space-y-8 p-8">
+    <div className="mx-auto max-w-4xl space-y-8 py-6 sm:py-8">
       <section className="space-y-4">
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold">Capital ledger</h1>

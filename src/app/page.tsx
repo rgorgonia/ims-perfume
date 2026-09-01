@@ -103,7 +103,7 @@ export default async function Dashboard() {
     "card-lift soft rounded-[18px] border border-neutral-200 p-5 dark:border-white/5";
 
   return (
-    <div className="mx-auto max-w-5xl space-y-8 p-8">
+    <div className="mx-auto max-w-5xl space-y-8 py-6 sm:py-8">
       <header className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">

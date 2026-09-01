@@ -67,12 +67,12 @@ function CategoryRow({ category }: { category: Category }) {
     return (
       <form
         action={updAction}
-        className="flex w-full flex-wrap items-end gap-2 rounded-2xl border border-black/10 p-3 dark:border-white/10"
+        className="grid w-full gap-2 rounded-2xl border border-black/10 p-3 sm:grid-cols-[minmax(0,1fr)_auto_auto_auto_auto] sm:items-start dark:border-white/10"
       >
         <input type="hidden" name="category_id" value={category.id} />
         <div className="space-y-0.5">
           <label className="text-xs font-medium">Label</label>
-          <input name="label" required defaultValue={category.label} className={inputCls} />
+          <input name="label" required defaultValue={category.label} className={`${inputCls} w-full`} />
         </div>
         <div className="space-y-0.5">
           <label className="text-xs font-medium">Sort order</label>
@@ -80,10 +80,10 @@ function CategoryRow({ category }: { category: Category }) {
             name="sort_order"
             type="number"
             defaultValue={category.sort_order}
-            className={`${inputCls} w-20`}
+            className={`${inputCls} w-full sm:w-20`}
           />
         </div>
-        <label className="flex items-center gap-1.5 pb-2 text-xs font-medium">
+        <label className="flex items-center gap-1.5 text-xs font-medium sm:pt-[22px]">
           <input
             type="checkbox"
             name="is_active"
@@ -92,13 +92,13 @@ function CategoryRow({ category }: { category: Category }) {
           />
           Active
         </label>
-        <button type="submit" disabled={updPending} className={primaryBtn}>
+        <button type="submit" disabled={updPending} className={`${primaryBtn} w-full sm:w-auto sm:mt-[22px]`}>
           {updPending ? "Saving…" : "Save"}
         </button>
-        <button type="button" onClick={() => setEditing(false)} className={ghostBtn}>
-          Cancel
-        </button>
-        <div className="w-full">
+          <button type="button" onClick={() => setEditing(false)} className={`${ghostBtn} w-full sm:w-auto sm:mt-[22px]`}>
+            Cancel
+          </button>
+        <div className="w-full sm:col-span-full">
           <Msg state={upd} />
         </div>
       </form>
@@ -196,21 +196,32 @@ export default function TaxonomyManager({ taxonomy }: { taxonomy: Taxonomy }) {
           )}
         </div>
 
-        <form action={addCatAction} className="flex flex-wrap items-center gap-3">
-          <input
-            name="label"
-            required
-            placeholder="New category label (e.g. Fragrance) *"
-            className={inputCls}
-          />
-          <input
-            name="sort_order"
-            type="number"
-            defaultValue={0}
-            aria-label="Sort order"
-            title="Sort order — lower numbers appear first"
-            className={`${inputCls} w-24`}
-          />
+        <form action={addCatAction} className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:items-end">
+          <div className="space-y-0.5">
+            <label htmlFor="new_cat_label" className="text-xs font-medium">
+              Category label
+            </label>
+            <input
+              id="new_cat_label"
+              name="label"
+              required
+              placeholder="e.g. Fragrance"
+              className={`${inputCls} w-full`}
+            />
+          </div>
+          <div className="space-y-0.5">
+            <label htmlFor="new_cat_sort" className="text-xs font-medium">
+              Sort order
+            </label>
+            <input
+              id="new_cat_sort"
+              name="sort_order"
+              type="number"
+              defaultValue={0}
+              title="Lower numbers appear first"
+              className={inputCls}
+            />
+          </div>
           <button
             type="submit"
             disabled={addCatPending}
@@ -218,7 +229,9 @@ export default function TaxonomyManager({ taxonomy }: { taxonomy: Taxonomy }) {
           >
             {addCatPending ? "Adding…" : "Add category"}
           </button>
-          <Msg state={addCat} />
+          <div className="sm:col-span-3">
+            <Msg state={addCat} />
+          </div>
         </form>
       </section>
       {/* ------------------------------------ Attribute definitions */}
@@ -336,23 +349,22 @@ export default function TaxonomyManager({ taxonomy }: { taxonomy: Taxonomy }) {
               className={`${inputCls} w-full`}
             />
           </div>
-          <div className="flex items-end gap-4">
-            <label className="flex items-center gap-2 text-sm font-medium">
-              <input type="checkbox" name="required" className="h-4 w-4" />
-              Required
+          <label className="flex items-center gap-2 text-sm font-medium sm:pt-[30px]">
+            <input type="checkbox" name="required" className="h-4 w-4" />
+            Required
+          </label>
+          <div className="space-y-1">
+            <label htmlFor="def_sort" className="text-sm font-medium">
+              Sort order
             </label>
-            <div className="space-y-1">
-              <label htmlFor="def_sort" className="text-sm font-medium">
-                Sort order
-              </label>
-              <input
-                id="def_sort"
-                name="sort_order"
-                type="number"
-                defaultValue={0}
-                className={inputCls}
-              />
-            </div>
+            <input
+              id="def_sort"
+              name="sort_order"
+              type="number"
+              defaultValue={0}
+              title="Lower numbers appear first"
+              className={inputCls}
+            />
           </div>
           <div className="sm:col-span-2">
             <div className="mb-3">
@@ -393,21 +405,20 @@ function DefinitionRow({ def }: { def: CategoryAttributeDefinition }) {
     return (
       <form
         action={updAction}
-        className="w-full space-y-2 rounded-2xl border border-black/10 p-3 dark:border-white/10"
+        className="grid w-full gap-2 rounded-2xl border border-black/10 p-3 sm:grid-cols-[minmax(0,1fr)_auto_auto_auto_auto_auto] sm:items-start dark:border-white/10"
       >
         <input type="hidden" name="definition_id" value={def.id} />
-        <div className="flex flex-wrap items-end gap-2">
-          <div className="space-y-0.5">
-            <label className="text-xs font-medium">Label</label>
-            <input name="label" required defaultValue={def.label} className={inputCls} />
-          </div>
+        <div className="space-y-0.5">
+          <label className="text-xs font-medium">Label</label>
+          <input name="label" required defaultValue={def.label} className={`${inputCls} w-full`} />
+        </div>
           <div className="space-y-0.5">
             <label className="text-xs font-medium">Input type</label>
             <select
               name="input_type"
               value={inputType}
               onChange={(e) => setInputType(e.target.value as AttributeInputType)}
-              className={inputCls}
+              className={`${inputCls} w-full sm:w-auto`}
             >
               {INPUT_TYPES.map((t) => (
                 <option key={t} value={t}>
@@ -422,7 +433,7 @@ function DefinitionRow({ def }: { def: CategoryAttributeDefinition }) {
               <input
                 name="options"
                 defaultValue={(def.options ?? []).join(", ")}
-                className={inputCls}
+                className={`${inputCls} w-full sm:w-auto`}
               />
             </div>
           )}
@@ -432,10 +443,10 @@ function DefinitionRow({ def }: { def: CategoryAttributeDefinition }) {
               name="sort_order"
               type="number"
               defaultValue={def.sort_order}
-              className={`${inputCls} w-20`}
+              className={`${inputCls} w-full sm:w-20`}
             />
           </div>
-          <label className="flex items-center gap-1.5 pb-2 text-xs font-medium">
+          <label className="flex items-center gap-1.5 text-xs font-medium sm:pt-[22px]">
             <input
               type="checkbox"
               name="required"
@@ -444,14 +455,15 @@ function DefinitionRow({ def }: { def: CategoryAttributeDefinition }) {
             />
             Required
           </label>
-          <button type="submit" disabled={updPending} className={primaryBtn}>
+          <button type="submit" disabled={updPending} className={`${primaryBtn} w-full sm:w-auto sm:mt-[22px]`}>
             {updPending ? "Saving…" : "Save"}
           </button>
-          <button type="button" onClick={() => setEditing(false)} className={ghostBtn}>
+          <button type="button" onClick={() => setEditing(false)} className={`${ghostBtn} w-full sm:w-auto sm:mt-[22px]`}>
             Cancel
           </button>
+        <div className="sm:col-span-full">
+          <Msg state={upd} />
         </div>
-        <Msg state={upd} />
       </form>
     );
   }

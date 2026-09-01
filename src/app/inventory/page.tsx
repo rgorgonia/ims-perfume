@@ -123,7 +123,7 @@ export default async function InventoryPage() {
     "rounded-[10px] border border-black/10 px-3 py-2 text-sm dark:border-neutral-700 dark:bg-transparent";
 
   return (
-    <div className="mx-auto max-w-5xl space-y-8 p-8">
+    <div className="mx-auto max-w-5xl space-y-8 py-6 sm:py-8">
       <section className="space-y-4">
         <h1 className="text-2xl font-bold">Record stock movement</h1>
         <form
