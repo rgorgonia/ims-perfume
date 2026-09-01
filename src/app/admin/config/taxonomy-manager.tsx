@@ -365,7 +365,7 @@ export default function TaxonomyManager({ taxonomy }: { taxonomy: Taxonomy }) {
               type="number"
               defaultValue={0}
               title="Lower numbers appear first"
-              className={inputCls}
+              className={`${inputCls} w-full sm:w-24`}
             />
           </div>
           <div className="sm:col-span-2">
