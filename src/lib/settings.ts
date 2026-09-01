@@ -1,5 +1,6 @@
 import { cache } from "react";
-import { createClient } from "@/lib/supabase/server";
+import { unstable_cache } from "next/cache";
+import { createClient as createPublicClient } from "@supabase/supabase-js";
 
 export type AppSettings = {
   businessName: string;
@@ -22,12 +23,39 @@ const DEFAULTS: AppSettings = {
   perfumeFeatures: true,
 };
 
+/** Shared anon client for cached reads (unstable_cache cannot use the
+ *  cookie-bound SSR client). app_settings is public-read under RLS. */
+let settingsClient: ReturnType<typeof createPublicClient> | null = null;
+function getSettingsClient() {
+  if (!settingsClient) {
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    if (!url || !key) throw new Error("Missing Supabase URL/anon key");
+    settingsClient = createPublicClient(url, key, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    });
+  }
+  return settingsClient;
+}
+
+const getCachedSettings = unstable_cache(
+  async (): Promise<Map<string, string>> => {
+    const { data } = await getSettingsClient()
+      .from("app_settings")
+      .select("key, value");
+    return new Map(
+      ((data ?? []) as { key: string; value: string }[]).map((r) => [r.key, r.value])
+    );
+  },
+  ["app-settings"],
+  { tags: ["config"], revalidate: 3600 }
+);
+
 /** Read the editable system settings, falling back to defaults. Server-side.
- *  React cache(): deduped per request (layout + page share one DB read). */
+ *  unstable_cache: one DB read per hour max, invalidated via revalidateTag("config")
+ *  (config save actions). React cache(): deduped per request. */
 export const getSettings: () => Promise<AppSettings> = cache(async function () {
-  const supabase = await createClient();
-  const { data } = await supabase.from("app_settings").select("key, value");
-  const map = new Map((data ?? []).map((r) => [r.key, r.value]));
+  const map = await getCachedSettings();
 
   const cats = (map.get("product_categories") ?? "")
     .split(",")

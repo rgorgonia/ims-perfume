@@ -2,7 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 
 export async function signOutAction() {
   const supabase = await createClient();
@@ -72,6 +72,7 @@ export async function updateSystemSettingsAction(
     .upsert(upserts, { onConflict: "key" });
   if (error) return { error: error.message };
 
+  revalidateTag("config");
   revalidatePath("/", "layout");
   return { success: "System settings saved" };
 }

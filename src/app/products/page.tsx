@@ -76,16 +76,14 @@ export default async function ProductsPage() {
   const session = await requireUser();
   const isAdmin = session.profile?.role === "system_admin";
   const supabase = await createClient();
-  const { currencySymbol, currencyLocale, sizeUnit } = await getSettings();
-  const taxonomy = await getTaxonomy();
+  const [{ currencySymbol, currencyLocale, sizeUnit }, taxonomy, { data: products }] =
+    await Promise.all([getSettings(), getTaxonomy(), supabase
+      .from("products")
+      .select(
+        "id, name, brand, concentration, category, retail_price, is_active, product_variants(sku, size_ml, retail_price)"
+      )
+      .order("name")]);
   const money = (n: number) => formatMoney(n, currencySymbol, currencyLocale);
-
-  const { data: products } = await supabase
-    .from("products")
-    .select(
-      "id, name, brand, concentration, category, retail_price, is_active, product_variants(sku, size_ml, retail_price)"
-    )
-    .order("name");
 
   const inputCls =
     "rounded-[10px] border border-black/10 px-3 py-2 text-sm dark:border-neutral-700 dark:bg-transparent";
@@ -144,51 +142,50 @@ export default async function ProductsPage() {
 
       <section className="space-y-3">
         <h2 className="text-xl font-semibold">Catalog</h2>
-        <div className="overflow-x-auto rounded-2xl border border-neutral-200 bg-white dark:bg-transparent dark:border-neutral-800 dark:bg-transparent">
-          <table className="w-full text-sm">
-            <thead className="bg-neutral-100 text-left dark:bg-neutral-900">
-              <tr>
-                <th className="px-4 py-2">Product</th>
-                <th className="px-4 py-2">Brand</th>
-                <th className="px-4 py-2">Category</th>
-                <th className="px-4 py-2">Concentration</th>
-                <th className="px-4 py-2">Variants</th>
-                <th className="px-4 py-2">Retail</th>
-              </tr>
-            </thead>
-            <tbody>
-              {((products ?? []) as unknown as Product[]).map((p) => (
-                <tr key={p.id} className="border-t border-neutral-200 dark:border-neutral-800">
-                  <td className="px-4 py-2 font-medium">
-                    <Link href={`/products/${p.id}`} className="hover:underline">
-                      {p.name}
-                    </Link>
-                  </td>
-                  <td className="px-4 py-2">{p.brand ?? "—"}</td>
-                  <td className="px-4 py-2">
-                    {taxonomy.categories.find((c) => c.slug === p.category)?.label ??
-                      p.category ??
-                      "—"}
-                  </td>
-                  <td className="px-4 py-2">{p.concentration ?? "—"}</td>
-                  <td className="px-4 py-2">
-                    {(p.product_variants ?? [])
-                      .map((v) => `${v.sku} (${v.size_ml}${sizeUnit})`)
-                      .join(", ") || "—"}
-                  </td>
-                  <td className="px-4 py-2">{money(Number(p.retail_price))}</td>
-                </tr>
-              ))}
-              {(products ?? []).length === 0 && (
+        {((products ?? []) as unknown as Product[]).length === 0 ? (
+          <div className="flex items-center justify-center rounded-2xl border border-neutral-200 bg-white px-4 py-10 text-neutral-500 dark:border-neutral-800 dark:bg-transparent">
+            No products yet.
+          </div>
+        ) : (
+          <div className="overflow-x-auto rounded-2xl border border-neutral-200 bg-white dark:bg-transparent dark:border-neutral-800 dark:bg-transparent">
+            <table className="w-full text-sm">
+              <thead className="bg-neutral-100 text-left dark:bg-neutral-900">
                 <tr>
-                  <td colSpan={6} className="px-4 py-6 text-center text-neutral-500">
-                    No products yet.
-                  </td>
+                  <th className="px-4 py-2">Product</th>
+                  <th className="px-4 py-2">Brand</th>
+                  <th className="px-4 py-2">Category</th>
+                  <th className="px-4 py-2">Concentration</th>
+                  <th className="px-4 py-2">Variants</th>
+                  <th className="px-4 py-2">Retail</th>
                 </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {((products ?? []) as unknown as Product[]).map((p) => (
+                  <tr key={p.id} className="border-t border-neutral-200 dark:border-neutral-800">
+                    <td className="px-4 py-2 font-medium">
+                      <Link href={`/products/${p.id}`} className="hover:underline">
+                        {p.name}
+                      </Link>
+                    </td>
+                    <td className="px-4 py-2">{p.brand ?? "—"}</td>
+                    <td className="px-4 py-2">
+                      {taxonomy.categories.find((c) => c.slug === p.category)?.label ??
+                        p.category ??
+                        "—"}
+                    </td>
+                    <td className="px-4 py-2">{p.concentration ?? "—"}</td>
+                    <td className="px-4 py-2">
+                      {(p.product_variants ?? [])
+                        .map((v) => `${v.sku} (${v.size_ml}${sizeUnit})`)
+                        .join(", ") || "—"}
+                    </td>
+                    <td className="px-4 py-2">{money(Number(p.retail_price))}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </section>
     </div>
   );

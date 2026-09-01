@@ -106,37 +106,37 @@ function CategoryRow({ category }: { category: Category }) {
   }
 
   return (
-    <div className="flex w-full flex-wrap items-center gap-2">
-      <span
-        className="min-w-0 max-w-full truncate rounded-2xl border border-black/[0.08] bg-black/[0.04] px-3 py-1 text-sm dark:border-white/10 dark:bg-white/10"
-        title={`${category.label} (${category.slug})`}
-      >
-        {category.label}
-        <span className="ml-1.5 font-mono text-xs text-neutral-500">{category.slug}</span>
-        {!category.is_active && (
-          <span className="ml-1.5 text-xs text-red-500">inactive</span>
-        )}
-      </span>
-      <span className="shrink-0 text-xs text-neutral-400">#{category.sort_order}</span>
-      <div className="ml-auto flex shrink-0 flex-wrap items-center gap-2">
+    <div className="flex w-full items-start justify-between gap-3">
+      <div className="min-w-0 flex-1 pt-0.5">
+        <span
+          className="block max-w-full truncate rounded-2xl border border-black/[0.08] bg-black/[0.04] px-3 py-1 text-sm dark:border-white/10 dark:bg-white/10"
+          title={`${category.label} (${category.slug})`}
+        >
+          {category.label}
+          <span className="ml-1.5 font-mono text-xs text-neutral-500">{category.slug}</span>
+          {!category.is_active && (
+            <span className="ml-1.5 text-xs text-red-500">inactive</span>
+          )}
+        </span>
+        <span className="mt-1 block text-xs text-neutral-400">#{category.sort_order}</span>
+      </div>
+      <div className="flex shrink-0 items-center gap-2">
         <button type="button" onClick={() => setEditing(true)} className={ghostBtn}>
           Edit
         </button>
         {confirmDelete ? (
-          <>
-            <span className="text-xs text-red-600 dark:text-red-400">
+          <form action={delAction} className="flex items-center gap-2">
+            <input type="hidden" name="category_id" value={category.id} />
+            <span className="hidden text-xs text-red-600 sm:inline dark:text-red-400">
               Delete category and its attribute definitions?
             </span>
-            <form action={delAction} className="contents">
-              <input type="hidden" name="category_id" value={category.id} />
-              <button type="submit" disabled={delPending} className={dangerBtn}>
-                {delPending ? "Deleting…" : "Yes, delete"}
-              </button>
-            </form>
+            <button type="submit" disabled={delPending} className={dangerBtn}>
+              {delPending ? "Deleting…" : "Yes, delete"}
+            </button>
             <button type="button" onClick={() => setConfirmDelete(false)} className={ghostBtn}>
               Cancel
             </button>
-          </>
+          </form>
         ) : (
           <button type="button" onClick={() => setConfirmDelete(true)} className={dangerBtn}>
             Delete
@@ -167,7 +167,7 @@ export default function TaxonomyManager({ taxonomy }: { taxonomy: Taxonomy }) {
   return (
     <div className="space-y-6">
       {/* ------------------------------------------------ Categories */}
-      <section className="soft rounded-[18px] p-6">
+      <section className="soft min-w-0 rounded-[18px] p-4 sm:p-6">
         <h2 className="mb-1 text-[15px] font-semibold">Product categories</h2>
         <ol className="mb-4 list-decimal space-y-0.5 pl-5 text-xs text-neutral-500 dark:text-slate-400">
           <li>
@@ -196,7 +196,7 @@ export default function TaxonomyManager({ taxonomy }: { taxonomy: Taxonomy }) {
           )}
         </div>
 
-        <form action={addCatAction} className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:items-end">
+        <form action={addCatAction} className="grid min-w-0 gap-2 sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_auto] sm:items-end">
           <div className="space-y-0.5">
             <label htmlFor="new_cat_label" className="text-xs font-medium">
               Category label
@@ -235,7 +235,7 @@ export default function TaxonomyManager({ taxonomy }: { taxonomy: Taxonomy }) {
         </form>
       </section>
       {/* ------------------------------------ Attribute definitions */}
-      <section className="soft rounded-[18px] p-6">
+      <section className="soft min-w-0 rounded-[18px] p-4 sm:p-6">
         <h2 className="mb-1 text-[15px] font-semibold">Attribute definitions</h2>
         <p className="mb-4 text-xs text-neutral-500 dark:text-slate-400">
           Each definition adds a custom field to the product form for that
@@ -469,36 +469,36 @@ function DefinitionRow({ def }: { def: CategoryAttributeDefinition }) {
   }
 
   return (
-    <div className="flex w-full flex-wrap items-center gap-2">
-      <span
-        className="min-w-0 max-w-full truncate rounded-2xl bg-neutral-100 px-3 py-1 text-xs dark:bg-neutral-900"
-        title={`${def.label} · ${def.input_type}${def.required ? " · required" : ""}`}
-      >
-        {def.label}
-        <span className="font-mono text-neutral-500">
-          {" "}· {def.input_type}
-          {def.required ? " · required" : ""}
+    <div className="flex w-full items-start justify-between gap-3">
+      <div className="min-w-0 flex-1 pt-0.5">
+        <span
+          className="block max-w-full truncate rounded-2xl bg-neutral-100 px-3 py-1 text-xs dark:bg-neutral-900"
+          title={`${def.label} · ${def.input_type}${def.required ? " · required" : ""}`}
+        >
+          {def.label}
+          <span className="font-mono text-neutral-500">
+            {" "}· {def.input_type}
+            {def.required ? " · required" : ""}
+          </span>
         </span>
-      </span>
-      <div className="ml-auto flex shrink-0 flex-wrap items-center gap-2">
+      </div>
+      <div className="flex shrink-0 items-center gap-2">
         <button type="button" onClick={() => setEditing(true)} className={ghostBtn}>
           Edit
         </button>
         {confirmDelete ? (
-          <>
-            <span className="text-xs text-red-600 dark:text-red-400">
+          <form action={delAction} className="flex items-center gap-2">
+            <input type="hidden" name="definition_id" value={def.id} />
+            <span className="hidden text-xs text-red-600 sm:inline dark:text-red-400">
               Remove this definition?
             </span>
-            <form action={delAction} className="contents">
-              <input type="hidden" name="definition_id" value={def.id} />
-              <button type="submit" disabled={delPending} className={dangerBtn}>
-                {delPending ? "Deleting…" : "Yes, remove"}
-              </button>
-            </form>
+            <button type="submit" disabled={delPending} className={dangerBtn}>
+              {delPending ? "Deleting…" : "Yes, remove"}
+            </button>
             <button type="button" onClick={() => setConfirmDelete(false)} className={ghostBtn}>
               Cancel
             </button>
-          </>
+          </form>
         ) : (
           <button type="button" onClick={() => setConfirmDelete(true)} className={dangerBtn}>
             ✕

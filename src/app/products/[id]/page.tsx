@@ -119,21 +119,15 @@ export default async function ProductPage({
   const { id } = await params;
   await requireUser();
   const supabase = await createClient();
-  const { currencySymbol, currencyLocale, sizeUnit } = await getSettings();
-  const taxonomy = await getTaxonomy();
+  const [{ currencySymbol, currencyLocale, sizeUnit }, taxonomy, { data: product }, { data: variants }] =
+    await Promise.all([
+      getSettings(),
+      getTaxonomy(),
+      supabase.from("products").select("*").eq("id", id).single(),
+      supabase.from("variant_public_view").select("*").eq("product_id", id),
+    ]);
   const money = (n: number) => formatMoney(n, currencySymbol, currencyLocale);
-
-  const { data: product } = await supabase
-    .from("products")
-    .select("*")
-    .eq("id", id)
-    .single();
   if (!product) notFound();
-
-  const { data: variants } = await supabase
-    .from("variant_public_view")
-    .select("*")
-    .eq("product_id", id);
   const variantList = (variants ?? []) as unknown as Variant[];
 
   const [{ data: notes }, { data: batches }] = await Promise.all([
