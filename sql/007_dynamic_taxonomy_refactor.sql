@@ -89,17 +89,21 @@ create trigger trg_validate_variant_attributes
 alter table public.product_categories enable row level security;
 alter table public.category_attribute_definitions enable row level security;
 
+drop policy if exists "taxonomy_read_all" on public.product_categories;
 create policy "taxonomy_read_all"
   on public.product_categories for select using (true);
 
+drop policy if exists "taxonomy_admin_write" on public.product_categories;
 create policy "taxonomy_admin_write"
   on public.product_categories for all
   using (public.is_system_admin())
   with check (public.is_system_admin());
 
+drop policy if exists "attr_defs_read_all" on public.category_attribute_definitions;
 create policy "attr_defs_read_all"
   on public.category_attribute_definitions for select using (true);
 
+drop policy if exists "attr_defs_admin_write" on public.category_attribute_definitions;
 create policy "attr_defs_admin_write"
   on public.category_attribute_definitions for all
   using (public.is_system_admin())
