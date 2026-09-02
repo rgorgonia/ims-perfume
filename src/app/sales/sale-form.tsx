@@ -81,16 +81,19 @@ export default function SaleForm({
           {res.success}
         </p>
       )}
-      <select
-        name="store_id"
-        required
-        className={inputCls}
-        value={storeId}
-        onChange={(e) => {
-          setStoreId(e.target.value);
-          setVariantId("");
-        }}
-      >
+      <div className="space-y-1">
+        <label htmlFor="sf-store" className="text-xs font-medium text-neutral-600 dark:text-neutral-400">Store *</label>
+        <select
+          id="sf-store"
+          name="store_id"
+          required
+          className={inputCls}
+          value={storeId}
+          onChange={(e) => {
+            setStoreId(e.target.value);
+            setVariantId("");
+          }}
+        >
         <option value="">Select store *</option>
         {stores.map((s) => (
           <option key={s.id} value={s.id}>
@@ -98,13 +101,17 @@ export default function SaleForm({
           </option>
         ))}
       </select>
-      <select
-        name="variant_id"
-        required
-        className={inputCls}
-        value={variantId}
-        onChange={(e) => setVariantId(e.target.value)}
-      >
+      </div>
+      <div className="space-y-1">
+        <label htmlFor="sf-variant" className="text-xs font-medium text-neutral-600 dark:text-neutral-400">Product variant *</label>
+        <select
+          id="sf-variant"
+          name="variant_id"
+          required
+          className={inputCls}
+          value={variantId}
+          onChange={(e) => setVariantId(e.target.value)}
+        >
         <option value="">Select product variant *</option>
         {filtered.map((v) => {
           const a = availFor(v);
@@ -116,32 +123,44 @@ export default function SaleForm({
             </option>
           );
         })}
-      </select>
-      <input
-        name="quantity"
-        type="number"
-        min="1"
-        max={maxQty || undefined}
-        required
-        value={qty}
-        onChange={(e) => setQty(Number(e.target.value))}
-        placeholder="Quantity *"
-        className={inputCls}
-      />
-      <select name="payment_method" className={inputCls}>
-        <option value="cash">Cash</option>
-        <option value="gcash">GCash</option>
-        <option value="card">Card</option>
-        <option value="bank_transfer">Bank transfer</option>
-      </select>
-      <input
-        name="discount"
-        type="number"
-        step="0.01"
-        min="0"
-        placeholder="Discount (optional)"
-        className={inputCls}
-      />
+        </select>
+      </div>
+      <div className="space-y-1">
+        <label htmlFor="sf-qty" className="text-xs font-medium text-neutral-600 dark:text-neutral-400">Quantity *</label>
+        <input
+          id="sf-qty"
+          name="quantity"
+          type="number"
+          min="1"
+          max={maxQty || undefined}
+          required
+          value={qty}
+          onChange={(e) => setQty(Number(e.target.value))}
+          placeholder="Quantity *"
+          className={inputCls}
+        />
+      </div>
+      <div className="space-y-1">
+        <label htmlFor="sf-payment" className="text-xs font-medium text-neutral-600 dark:text-neutral-400">Payment method</label>
+        <select id="sf-payment" name="payment_method" className={inputCls}>
+          <option value="cash">Cash</option>
+          <option value="gcash">GCash</option>
+          <option value="card">Card</option>
+          <option value="bank_transfer">Bank transfer</option>
+        </select>
+      </div>
+      <div className="space-y-1">
+        <label htmlFor="sf-discount" className="text-xs font-medium text-neutral-600 dark:text-neutral-400">Discount (optional)</label>
+        <input
+          id="sf-discount"
+          name="discount"
+          type="number"
+          step="0.01"
+          min="0"
+          placeholder="Discount (optional)"
+          className={inputCls}
+        />
+      </div>
       <button
         type="submit"
         disabled={pending || noVariantAvailable}

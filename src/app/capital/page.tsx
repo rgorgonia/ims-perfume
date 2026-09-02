@@ -101,19 +101,27 @@ export default async function CapitalPage() {
               <option key={s.id} value={s.id}>{s.name}</option>
             ))}
           </select>
-          <input
-            name="amount"
-            type="number"
-            step="0.01"
-            required
-            placeholder="Amount * (sign ignored)"
-            className={inputCls}
-          />
-          <input
-            name="description"
-            placeholder="Description"
-            className={inputCls}
-          />
+          <div className="space-y-1">
+            <label htmlFor="cf-amount" className="text-xs font-medium text-neutral-600 dark:text-neutral-400">Amount *</label>
+            <input
+              id="cf-amount"
+              name="amount"
+              type="number"
+              step="0.01"
+              required
+              placeholder="Amount * (sign ignored)"
+              className={inputCls}
+            />
+          </div>
+          <div className="space-y-1">
+            <label htmlFor="cf-desc" className="text-xs font-medium text-neutral-600 dark:text-neutral-400">Description</label>
+            <input
+              id="cf-desc"
+              name="description"
+              placeholder="Description"
+              className={inputCls}
+            />
+          </div>
           <button
             type="submit"
             className="rounded-2xl btn-neon px-4 py-2 text-sm font-medium transition-opacity hover:opacity-80 sm:col-span-2"

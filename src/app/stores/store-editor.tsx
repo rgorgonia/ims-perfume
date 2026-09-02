@@ -178,8 +178,14 @@ export function StoreRow({
       >
         <input type="hidden" name="store_id" value={store.id} />
         <div className="grid gap-3 sm:grid-cols-2">
-          <input name="name" required defaultValue={store.name} placeholder="Store name *" className={inputCls} />
-          <input name="address" defaultValue={store.address ?? ""} placeholder="Address (optional)" className={inputCls} />
+          <div className="space-y-1">
+            <label htmlFor={`se-name-${store.id}`} className="text-xs font-medium text-neutral-600 dark:text-neutral-400">Store name *</label>
+            <input id={`se-name-${store.id}`} name="name" required defaultValue={store.name} placeholder="Store name *" className={inputCls} />
+          </div>
+          <div className="space-y-1">
+            <label htmlFor={`se-addr-${store.id}`} className="text-xs font-medium text-neutral-600 dark:text-neutral-400">Address (optional)</label>
+            <input id={`se-addr-${store.id}`} name="address" defaultValue={store.address ?? ""} placeholder="Address (optional)" className={inputCls} />
+          </div>
         </div>
         <StoreTypeAndManager
           users={users}
@@ -281,8 +287,14 @@ export function CreateStoreForm({
       className="grid gap-3 rounded-2xl border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-transparent"
     >
       <div className="grid gap-3 sm:grid-cols-2">
-        <input name="name" required placeholder="Store name *" className={inputCls} />
-        <input name="address" placeholder="Address (optional)" className={inputCls} />
+        <div className="space-y-1">
+          <label htmlFor="sn-name" className="text-xs font-medium text-neutral-600 dark:text-neutral-400">Store name *</label>
+          <input id="sn-name" name="name" required placeholder="Store name *" className={inputCls} />
+        </div>
+        <div className="space-y-1">
+          <label htmlFor="sn-addr" className="text-xs font-medium text-neutral-600 dark:text-neutral-400">Address (optional)</label>
+          <input id="sn-addr" name="address" placeholder="Address (optional)" className={inputCls} />
+        </div>
       </div>
       <StoreTypeAndManager users={users} />
       <CategoryCheckboxes taxonomy={taxonomy} selected={null} />

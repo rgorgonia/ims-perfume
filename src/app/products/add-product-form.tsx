@@ -46,40 +46,62 @@ export default function AddProductForm({
           {res.success}
         </p>
       )}
-      <input name="name" required placeholder="Product name *" className={inputCls} />
-      <input name="brand" placeholder="Brand" className={inputCls} />
+      <div className="space-y-1">
+        <label htmlFor="pf-name" className="text-xs font-medium text-neutral-600 dark:text-neutral-400">Product name *</label>
+        <input id="pf-name" name="name" required placeholder="Product name *" className={inputCls} />
+      </div>
+      <div className="space-y-1">
+        <label htmlFor="pf-brand" className="text-xs font-medium text-neutral-600 dark:text-neutral-400">Brand</label>
+        <input id="pf-brand" name="brand" placeholder="Brand" className={inputCls} />
+      </div>
       <CategoryAttributeFields taxonomy={taxonomy} />
-      <input
-        name="sku"
-        required
-        placeholder="SKU for first variant *"
-        className={inputCls}
-      />
-      <input
-        name="size_ml"
-        required
-        type="number"
-        min="1"
-        placeholder={`Size (${sizeUnit}) *`}
-        className={inputCls}
-      />
-      <input
-        name="retail_price"
-        type="number"
-        step="0.01"
-        min="0"
-        placeholder="Retail price"
-        className={inputCls}
-      />
-      {isAdmin && (
+      <div className="space-y-1">
+        <label htmlFor="pf-sku" className="text-xs font-medium text-neutral-600 dark:text-neutral-400">SKU (first variant) *</label>
         <input
-          name="cost_price"
+          id="pf-sku"
+          name="sku"
+          required
+          placeholder="SKU for first variant *"
+          className={inputCls}
+        />
+      </div>
+      <div className="space-y-1">
+        <label htmlFor="pf-size" className="text-xs font-medium text-neutral-600 dark:text-neutral-400">Size ({sizeUnit}) *</label>
+        <input
+          id="pf-size"
+          name="size_ml"
+          required
+          type="number"
+          min="1"
+          placeholder={`Size (${sizeUnit}) *`}
+          className={inputCls}
+        />
+      </div>
+      <div className="space-y-1">
+        <label htmlFor="pf-retail" className="text-xs font-medium text-neutral-600 dark:text-neutral-400">Retail price</label>
+        <input
+          id="pf-retail"
+          name="retail_price"
           type="number"
           step="0.01"
           min="0"
-          placeholder="Cost price (admin)"
+          placeholder="Retail price"
           className={inputCls}
         />
+      </div>
+      {isAdmin && (
+        <div className="space-y-1">
+          <label htmlFor="pf-cost" className="text-xs font-medium text-neutral-600 dark:text-neutral-400">Cost price (admin)</label>
+          <input
+            id="pf-cost"
+            name="cost_price"
+            type="number"
+            step="0.01"
+            min="0"
+            placeholder="Cost price (admin)"
+            className={inputCls}
+          />
+        </div>
       )}
       <button
         type="submit"

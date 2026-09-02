@@ -26,20 +26,32 @@ export default function RegisterForm({
   return (
     <div className="space-y-4">
       <form action={formAction} className="grid gap-3 rounded-2xl border border-neutral-200 bg-white p-4 sm:grid-cols-2 dark:border-neutral-800 dark:bg-transparent">
-        <input name="full_name" required placeholder="Full name" className={inputCls} />
-        <input name="email" type="email" required placeholder="email@example.com" className={inputCls} />
-        <select name="role" className={inputCls}>
-          <option value="store_manager">Store Manager</option>
-          {isPlatformAdmin && <option value="tenant_owner">Tenant Owner</option>}
-        </select>
-        <select name="store_id" className={inputCls}>
+        <div className="space-y-1">
+          <label htmlFor="rf-name" className="text-xs font-medium text-neutral-600 dark:text-neutral-400">Full name</label>
+          <input id="rf-name" name="full_name" required placeholder="Full name" className={inputCls} />
+        </div>
+        <div className="space-y-1">
+          <label htmlFor="rf-email" className="text-xs font-medium text-neutral-600 dark:text-neutral-400">Email</label>
+          <input id="rf-email" name="email" type="email" required placeholder="email@example.com" className={inputCls} />
+        </div>
+        <div className="space-y-1">
+          <label htmlFor="rf-role" className="text-xs font-medium text-neutral-600 dark:text-neutral-400">Role</label>
+          <select id="rf-role" name="role" className={inputCls}>
+            <option value="store_manager">Store Manager</option>
+            {isPlatformAdmin && <option value="tenant_owner">Tenant Owner</option>}
+          </select>
+        </div>
+        <div className="space-y-1">
+          <label htmlFor="rf-store" className="text-xs font-medium text-neutral-600 dark:text-neutral-400">Store assignment</label>
+          <select id="rf-store" name="store_id" className={inputCls}>
           <option value="">No store assigned</option>
           {stores.map((s) => (
             <option key={s.id} value={s.id}>
               {s.name}
             </option>
           ))}
-        </select>
+          </select>
+        </div>
         <button
           type="submit"
           disabled={pending}

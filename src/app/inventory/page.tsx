@@ -152,26 +152,38 @@ export default async function InventoryPage() {
             <option value="adjustment">Adjustment (+/-)</option>
             <option value="wastage">Wastage (removes)</option>
           </select>
-          <input
-            name="quantity"
-            type="number"
-            required
-            placeholder="Quantity *"
-            className={inputCls}
-          />
+          <div className="space-y-1">
+            <label htmlFor="inv-qty" className="text-xs font-medium text-neutral-600 dark:text-neutral-400">Quantity *</label>
+            <input
+              id="inv-qty"
+              name="quantity"
+              type="number"
+              required
+              placeholder="Quantity *"
+              className={inputCls}
+            />
+          </div>
           {isPrivileged && (
             <>
-              <input
-                name="lot_number"
-                placeholder="Batch lot number (optional)"
-                className={inputCls}
-              />
-              <input
-                name="expires_on"
-                type="date"
-                className={inputCls}
-                aria-label="Expires on"
-              />
+              <div className="space-y-1">
+                <label htmlFor="inv-lot" className="text-xs font-medium text-neutral-600 dark:text-neutral-400">Batch lot number (optional)</label>
+                <input
+                  id="inv-lot"
+                  name="lot_number"
+                  placeholder="Batch lot number (optional)"
+                  className={inputCls}
+                />
+              </div>
+              <div className="space-y-1">
+                <label htmlFor="inv-exp" className="text-xs font-medium text-neutral-600 dark:text-neutral-400">Expires on</label>
+                <input
+                  id="inv-exp"
+                  name="expires_on"
+                  type="date"
+                  className={inputCls}
+                  aria-label="Expires on"
+                />
+              </div>
             </>
           )}
           <button
