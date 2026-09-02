@@ -74,6 +74,83 @@ export async function resetUserPasswordAction(formData: FormData) {
   redirect(`/users?reset=${encodeURIComponent(email)}`);
 }
 
+const STORE_TYPES = ["physical", "online", "kiosk", "warehouse"] as const;
+
+/**
+ * Validate an existing store assignment: the store must belong to the tenant
+ * the user is being created under. Returns an error message or null.
+ */
+async function validateStoreTenant(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  storeId: string,
+  tenantId: string | null
+): Promise<string | null> {
+  if (!storeId) return null;
+  const { data: store } = await supabase
+    .from("stores")
+    .select("tenant_id")
+    .eq("id", storeId)
+    .single();
+  if (!store) return "Selected store does not exist";
+  if (!tenantId || store.tenant_id !== tenantId) {
+    return "Selected store belongs to a different tenant";
+  }
+  return null;
+}
+
+/**
+ * Create a store inline during user registration, including its
+ * configuration (address, store type, categories sold).
+ */
+async function createInlineStore(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  formData: FormData,
+  tenantId: string
+): Promise<{ id?: string; error?: string }> {
+  const name = String(formData.get("new_store_name") ?? "").trim();
+  if (!name) return { error: "New store name is required" };
+  const address = String(formData.get("new_store_address") ?? "").trim();
+  const typeRaw = String(formData.get("new_store_type") ?? "physical");
+  const storeType = (STORE_TYPES as readonly string[]).includes(typeRaw) ? typeRaw : "physical";
+  const categories = formData
+    .getAll("new_store_categories")
+    .map((c) => String(c).trim())
+    .filter(Boolean);
+
+  // Enforce the tenant's max_stores subscription limit (defense in depth —
+  // the DB trigger also enforces this).
+  const { data: limits } = await supabase
+    .from("tenants")
+    .select("max_stores")
+    .eq("id", tenantId)
+    .single();
+  if (limits?.max_stores != null) {
+    const { count } = await supabase
+      .from("stores")
+      .select("id", { count: "exact", head: true })
+      .eq("tenant_id", tenantId);
+    if ((count ?? 0) >= limits.max_stores) {
+      return {
+        error: `Tenant limit reached: subscription allows at most ${limits.max_stores} stores`,
+      };
+    }
+  }
+
+  const { data: store, error } = await supabase
+    .from("stores")
+    .insert({
+      name,
+      address: address || null,
+      store_type: storeType,
+      categories: categories.length ? categories : null,
+      tenant_id: tenantId,
+    })
+    .select("id")
+    .single();
+  if (error || !store) return { error: error?.message ?? "Could not create the store" };
+  return { id: store.id };
+}
+
 export async function registerUserAction(
   _prev: RegisterResult,
   formData: FormData
@@ -85,6 +162,7 @@ export async function registerUserAction(
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
   const role = String(formData.get("role") ?? "store_manager");
   const storeId = String(formData.get("store_id") ?? "");
+  const storeMode = String(formData.get("store_mode") ?? "existing");
 
   if (!fullName || !email) return { error: "Name and email are required" };
 
@@ -104,6 +182,28 @@ export async function registerUserAction(
     tenantId = session.tenant_id; // tenant owner's own tenant
   }
 
+  const supabase = await createClient();
+
+  // Resolve the store assignment. A store manager must end up bound to
+  // exactly one store in their own tenant.
+  let finalStoreId: string | null = null;
+  if (finalRole === "store_manager") {
+    if (storeMode === "new") {
+      if (!tenantId) {
+        return { error: "Choose a tenant before creating a new store" };
+      }
+      const created = await createInlineStore(supabase, formData, tenantId);
+      if (created.error || !created.id) {
+        return { error: created.error ?? "Could not create the store" };
+      }
+      finalStoreId = created.id;
+    } else if (storeId) {
+      const storeError = await validateStoreTenant(supabase, storeId, tenantId);
+      if (storeError) return { error: storeError };
+      finalStoreId = storeId;
+    }
+  }
+
   const tempPassword = generateTempPassword();
   const admin = createAdminClient();
   const { data, error } = await admin.auth.admin.createUser({
@@ -116,19 +216,22 @@ export async function registerUserAction(
     return { error: error?.message ?? "Could not create the auth user" };
   }
 
-  const supabase = await createClient();
   const { error: profileError } = await supabase.from("profiles").insert({
     id: data.user.id,
     full_name: fullName,
     role: finalRole,
     tenant_id: tenantId,
-    store_id: finalRole === "store_manager" && storeId ? storeId : null,
+    store_id: finalRole === "store_manager" ? finalStoreId : null,
   });
   if (profileError) {
     await admin.auth.admin.deleteUser(data.user.id);
     return { error: profileError.message };
   }
+  // If the store was created inline but the user insert failed above, the
+  // store remains — that is acceptable (an empty configured store), unlike an
+  // orphaned auth user.
 
   revalidatePath("/users");
+  revalidatePath("/stores");
   return { email, tempPassword };
 }

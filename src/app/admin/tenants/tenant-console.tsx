@@ -314,7 +314,32 @@ function TenantActionsMenu({
 }) {
   const [open, setOpen] = useState(false);
   const [confirming, setConfirming] = useState(false);
+  const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
   const ref = useRef<HTMLDivElement>(null);
+  const btnRef = useRef<HTMLButtonElement>(null);
+
+  function toggle() {
+    const btn = btnRef.current;
+    if (btn && !open) {
+      // Position with `fixed` so ancestor overflow containers (the
+      // table's overflow-x-auto / section's overflow-hidden) can't clip
+      // the menu. Flip upward when the last row is near the viewport
+      // bottom.
+      const r = btn.getBoundingClientRect();
+      const MENU_H = 220; // approx: 3 items + divider + padding
+      const top =
+        r.bottom + MENU_H > window.innerHeight
+          ? Math.max(8, r.top - MENU_H - 4)
+          : r.bottom + 4;
+      const left = Math.min(
+        Math.max(8, r.right - 256), // menu width w-64
+        window.innerWidth - 264
+      );
+      setPos({ top, left });
+    }
+    setOpen((v) => !v);
+    setConfirming(false);
+  }
 
   useEffect(() => {
     if (!open) return;
@@ -342,19 +367,21 @@ function TenantActionsMenu({
     <div className="relative" ref={ref}>
       <button
         type="button"
+        ref={btnRef}
         aria-haspopup="menu"
         aria-expanded={open}
         aria-label={`Actions for ${tenant.name}`}
-        onClick={() => setOpen((v) => !v)}
+        onClick={toggle}
         className="rounded-full p-1.5 text-neutral-500 hover:bg-neutral-100 hover:text-neutral-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-900 dark:text-slate-400 dark:hover:bg-neutral-800 dark:hover:text-white"
       >
         <MoreHorizontal className="h-5 w-5" />
       </button>
 
-      {open && (
+      {open && pos && (
         <div
           role="menu"
-          className="absolute right-0 z-20 mt-1 w-64 overflow-hidden rounded-xl border border-neutral-200 bg-white py-1 shadow-lg dark:border-neutral-800 dark:bg-neutral-900"
+          style={{ position: "fixed", top: pos.top, left: pos.left }}
+          className="z-50 w-64 overflow-hidden rounded-xl border border-neutral-200 bg-white py-1 shadow-lg dark:border-neutral-800 dark:bg-neutral-900"
         >
           <a
             role="menuitem"

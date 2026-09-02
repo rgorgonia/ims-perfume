@@ -1,6 +1,7 @@
 import { revalidatePath } from "next/cache";
 import { requirePrivileged } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
+import { getTaxonomy } from "@/lib/services/taxonomy";
 import RegisterForm from "./register-form";
 import ResetPasswordButton from "./reset-button";
 import ReassignControl from "./reassign-control";
@@ -43,11 +44,11 @@ export default async function UsersPage({
     : Promise.resolve({ data: [] as { id: string; name: string }[] });
 
   const storeQuery = session.tenant_id
-    ? supabase.from("stores").select("id, name").eq("tenant_id", session.tenant_id).order("name")
-    : supabase.from("stores").select("id, name").order("name");
+    ? supabase.from("stores").select("id, name, tenant_id").eq("tenant_id", session.tenant_id).order("name")
+    : supabase.from("stores").select("id, name, tenant_id").order("name");
 
-  const [{ data: profiles }, { data: stores }, { data: tenants }] =
-    await Promise.all([profileQuery, storeQuery, tenantsQuery]);
+  const [{ data: profiles }, { data: stores }, { data: tenants }, taxonomy] =
+    await Promise.all([profileQuery, storeQuery, tenantsQuery, getTaxonomy()]);
 
   return (
     <div className="mx-auto max-w-5xl space-y-8 py-6 sm:py-8">
@@ -69,6 +70,7 @@ export default async function UsersPage({
           stores={stores ?? []}
           tenants={tenants ?? []}
           isPlatformAdmin={session.isPlatformAdmin}
+          categories={taxonomy.categories.map((c) => ({ slug: c.slug, label: c.label }))}
         />
       </section>
 

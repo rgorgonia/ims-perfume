@@ -10,13 +10,21 @@ export default function RegisterForm({
   stores,
   tenants,
   isPlatformAdmin,
+  categories,
 }: {
-  stores: { id: string; name: string }[];
+  stores: { id: string; name: string; tenant_id: string | null }[];
   tenants: { id: string; name: string }[];
   isPlatformAdmin: boolean;
+  categories: { slug: string; label: string }[];
 }) {
   const [result, formAction, pending] = useActionState(registerUserAction, {});
   const [copied, setCopied] = useState(false);
+  const [tenantId, setTenantId] = useState("");
+  const [storeMode, setStoreMode] = useState<"existing" | "new">("existing");
+
+  const visibleStores = tenantId
+    ? stores.filter((s) => s.tenant_id === tenantId)
+    : stores;
 
   async function copyPassword() {
     if (!result.tempPassword) return;
@@ -46,7 +54,7 @@ export default function RegisterForm({
         {isPlatformAdmin && (
           <div className="space-y-1">
             <label htmlFor="rf-tenant" className="text-xs font-medium text-neutral-600 dark:text-neutral-400">Tenant</label>
-            <select id="rf-tenant" name="tenant_id" className={inputCls}>
+            <select id="rf-tenant" name="tenant_id" className={inputCls} value={tenantId} onChange={(e) => setTenantId(e.target.value)}>
               <option value="">No tenant (platform-wide)</option>
               {tenants.map((t) => (
                 <option key={t.id} value={t.id}>
@@ -57,16 +65,62 @@ export default function RegisterForm({
           </div>
         )}
         <div className="space-y-1">
-          <label htmlFor="rf-store" className="text-xs font-medium text-neutral-600 dark:text-neutral-400">Store assignment</label>
-          <select id="rf-store" name="store_id" className={inputCls}>
-          <option value="">No store assigned</option>
-          {stores.map((s) => (
-            <option key={s.id} value={s.id}>
-              {s.name}
-            </option>
-          ))}
+          <label htmlFor="rf-store-mode" className="text-xs font-medium text-neutral-600 dark:text-neutral-400">Store</label>
+          <select
+            id="rf-store-mode"
+            className={inputCls}
+            value={storeMode}
+            onChange={(e) => setStoreMode(e.target.value as "existing" | "new")}
+          >
+            <option value="existing">Assign existing store</option>
+            <option value="new">Create new store…</option>
           </select>
         </div>
+        {storeMode === "existing" ? (
+          <div className="space-y-1">
+            <label htmlFor="rf-store" className="text-xs font-medium text-neutral-600 dark:text-neutral-400">Store assignment</label>
+            <select id="rf-store" name="store_id" className={inputCls}>
+              <option value="">No store assigned</option>
+              {visibleStores.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        ) : (
+          <>
+            <input type="hidden" name="store_mode" value="new" />
+            <div className="space-y-1">
+              <label htmlFor="rf-new-store-name" className="text-xs font-medium text-neutral-600 dark:text-neutral-400">New store name</label>
+              <input id="rf-new-store-name" name="new_store_name" required placeholder="Store name" className={inputCls} />
+            </div>
+            <div className="space-y-1">
+              <label htmlFor="rf-new-store-address" className="text-xs font-medium text-neutral-600 dark:text-neutral-400">New store address</label>
+              <input id="rf-new-store-address" name="new_store_address" placeholder="Address (optional)" className={inputCls} />
+            </div>
+            <div className="space-y-1">
+              <label htmlFor="rf-new-store-type" className="text-xs font-medium text-neutral-600 dark:text-neutral-400">Store type</label>
+              <select id="rf-new-store-type" name="new_store_type" className={inputCls}>
+                <option value="physical">Physical</option>
+                <option value="online">Online</option>
+                <option value="kiosk">Kiosk</option>
+                <option value="warehouse">Warehouse</option>
+              </select>
+            </div>
+            <div className="space-y-1 sm:col-span-2">
+              <span className="text-xs font-medium text-neutral-600 dark:text-neutral-400">Categories sold</span>
+              <div className="flex flex-wrap gap-3">
+                {categories.map((c) => (
+                  <label key={c.slug} className="flex items-center gap-1.5 text-sm">
+                    <input type="checkbox" name="new_store_categories" value={c.slug} />
+                    {c.label}
+                  </label>
+                ))}
+              </div>
+            </div>
+          </>
+        )}
         <button
           type="submit"
           disabled={pending}

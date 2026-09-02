@@ -90,7 +90,10 @@ export default async function SalesPage() {
     { data: sales },
     { data: inventory },
   ] = await Promise.all([
-    supabase.from("stores").select("id, name, categories").order("name"),
+    // Store managers are bound to exactly one store — only offer theirs.
+    session.isStoreManager && session.profile?.store_id
+      ? supabase.from("stores").select("id, name, categories").eq("id", session.profile.store_id)
+      : supabase.from("stores").select("id, name, categories").order("name"),
     supabase
       .from("variant_public_view")
       .select("id, sku, size_ml, retail_price, products(name, category)")
