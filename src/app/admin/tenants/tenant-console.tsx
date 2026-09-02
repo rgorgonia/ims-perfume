@@ -231,13 +231,53 @@ function ProvisionModal({ onClose }: { onClose: () => void }) {
               />
             </label>
             <label className="text-sm">
-              <span className="mb-1 block font-medium">First store (optional)</span>
+              <span className="mb-1 block font-medium">Slug / subdomain *</span>
               <input
-                name="first_store"
+                name="slug"
                 className={inputCls}
-                placeholder="Acme Flagship — Makati"
+                placeholder="acme (defaults from business name)"
               />
             </label>
+            <div className="grid grid-cols-2 gap-3">
+              <label className="text-sm">
+                <span className="mb-1 block font-medium">Subscription tier</span>
+                <select name="subscription_tier" defaultValue="starter" className={`${inputCls} w-full`}>
+                  <option value="starter">Starter</option>
+                  <option value="growth">Growth</option>
+                  <option value="enterprise">Enterprise</option>
+                </select>
+              </label>
+              <label className="text-sm">
+                <span className="mb-1 block font-medium">First store (optional)</span>
+                <input
+                  name="first_store"
+                  className={inputCls}
+                  placeholder="Acme Flagship — Makati"
+                />
+              </label>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <label className="text-sm">
+                <span className="mb-1 block font-medium">Max stores (blank = unlimited)</span>
+                <input
+                  name="max_stores"
+                  type="number"
+                  min={1}
+                  className={inputCls}
+                  placeholder="5"
+                />
+              </label>
+              <label className="text-sm">
+                <span className="mb-1 block font-medium">Max users (blank = unlimited)</span>
+                <input
+                  name="max_users"
+                  type="number"
+                  min={1}
+                  className={inputCls}
+                  placeholder="10"
+                />
+              </label>
+            </div>
             {state.error && (
               <p className="text-sm font-medium text-red-600 dark:text-red-400" role="alert">
                 {state.error}

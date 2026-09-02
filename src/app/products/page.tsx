@@ -50,40 +50,24 @@ async function createProduct(
   const taxonomy = await getTaxonomy(session.tenant_id);
   const attributes = parseVariantAttributes(formData, taxonomy, category);
 
-  const { data: product, error } = await supabase
-    .from("products")
-    .insert({
-      name,
-      brand: brand || null,
-      category: category || null,
-      tenant_id: session.tenant_id,
-      // Dual-write legacy column while the transition is in progress
-      ...(typeof attributes.concentration === "string"
-        ? { concentration: attributes.concentration }
-        : {}),
-      cost_price: costPrice,
-      retail_price: retailPrice,
-    })
-    .select("id")
-    .single();
-  if (error || !product)
+  // ONE atomic RPC (migration 013): product + first variant in a single
+  // transaction, so a duplicate-SKU failure can never leave an orphan
+  // product that is invisible to Inventory/Sales.
+  const { data: created, error } = await supabase.rpc(
+    "create_product_with_variant",
+    {
+      p_name: name,
+      p_brand: brand || null,
+      p_category: category || null,
+      p_attributes: attributes,
+      p_sku: sku,
+      p_size_ml: sizeMl,
+      p_retail_price: retailPrice,
+      p_cost_price: isPrivileged ? costPrice : null,
+    }
+  );
+  if (error || !created)
     return { error: error?.message ?? "Could not create the product." };
-
-  const { error: varError } = await supabase.from("product_variants").insert({
-    product_id: product.id,
-    tenant_id: session.tenant_id,
-    sku,
-    size_ml: sizeMl,
-    cost_price: costPrice,
-    retail_price: retailPrice,
-    attributes,
-  });
-  if (varError) {
-    // A product with no variant is invisible to Inventory/Sales. Roll the
-    // parent back so we never leave an orphan (a product that can't be sold).
-    await supabase.from("products").delete().eq("id", product.id);
-    return { error: varError.message };
-  }
 
   revalidatePath("/products");
   revalidatePath("/inventory");

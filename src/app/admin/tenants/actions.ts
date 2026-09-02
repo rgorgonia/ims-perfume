@@ -43,15 +43,22 @@ export async function createTenantAction(
   const ownerEmail = String(formData.get("owner_email") ?? "").trim().toLowerCase();
   const ownerName = String(formData.get("owner_name") ?? "").trim();
   const firstStore = String(formData.get("first_store") ?? "").trim();
+  const tier = String(formData.get("subscription_tier") ?? "starter");
+  const maxStores = Number(formData.get("max_stores") ?? "") || null;
+  const maxUsers = Number(formData.get("max_users") ?? "") || null;
 
   if (!businessName || !ownerEmail || !ownerName)
     return { error: "Business name, owner name and owner email are required." };
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(ownerEmail))
     return { error: "Owner email is not valid." };
+  if (!["starter", "growth", "enterprise"].includes(tier))
+    return { error: "Invalid subscription tier." };
 
   const supabase = await createClient();
-  const slug = slugify(businessName);
-  if (!slug) return { error: "Business name must contain letters or numbers." };
+  // Slug is an explicit input (spec Phase 1); auto-slugify only as a default.
+  const rawSlug = String(formData.get("slug") ?? "").trim();
+  const slug = slugify(rawSlug || businessName);
+  if (!slug) return { error: "Slug must contain letters or numbers." };
 
   // Unique slug guard (friendly error instead of a raw constraint violation).
   const { data: existing } = await supabase
@@ -74,50 +81,30 @@ export async function createTenantAction(
   if (createError || !created?.user)
     return { error: createError?.message ?? "Could not create the owner account." };
 
-  // 2. Tenant row.
-  const { data: tenant, error: tenantError } = await supabase
-    .from("tenants")
-    .insert({ name: businessName, slug, is_active: true })
-    .select("id")
-    .single();
-  if (tenantError || !tenant) {
-    // Roll back the auth user so we never leave an owner without a tenant.
-    await admin.auth.admin.deleteUser(created.user.id);
-    return { error: tenantError?.message ?? "Could not create the tenant." };
-  }
-
-  // 3. Owner profile bound to the new tenant.
-  const { error: profileError } = await supabase.from("profiles").upsert({
-    id: created.user.id,
-    email: ownerEmail,
-    full_name: ownerName,
-    role: "tenant_owner",
-    tenant_id: tenant.id,
-    store_id: null,
-    is_active: true,
-  });
-  if (profileError) {
-    await admin.auth.admin.deleteUser(created.user.id);
-    await supabase.from("tenants").delete().eq("id", tenant.id);
-    return { error: profileError.message };
-  }
-
-  // 4. Optional first store.
-  if (firstStore) {
-    const { error: storeError } = await supabase.from("stores").insert({
-      name: firstStore,
-      tenant_id: tenant.id,
-      store_type: "physical",
-    });
-    if (storeError) {
-      // Non-fatal: tenant + owner exist; surface the store failure only.
-      revalidatePath("/admin/tenants");
-      return {
-        success: `Tenant "${businessName}" created, but the store could not be added: ${storeError.message}`,
-        tempPassword,
-        ownerEmail,
-      };
+  // 2. Tenant + owner profile + optional first store — ONE atomic RPC
+  //    (migration 013). Any failure rolls back completely server-side;
+  //    we then delete the auth user so zero partial state remains.
+  const { data: tenantId, error: rpcError } = await supabase.rpc(
+    "provision_tenant",
+    {
+      p_owner_id: created.user.id,
+      p_business_name: businessName,
+      p_slug: slug,
+      p_owner_name: ownerName,
+      p_first_store: firstStore || null,
+      p_tier: tier,
+      p_max_stores: maxStores,
+      p_max_users: maxUsers,
     }
+  );
+  if (rpcError || !tenantId) {
+    await admin.auth.admin.deleteUser(created.user.id);
+    const msg = rpcError?.message ?? "Could not create the tenant.";
+    return {
+      error: /limit reached/i.test(msg)
+        ? `Subscription limit rejected the provisioning: ${msg}`
+        : msg,
+    };
   }
 
   revalidatePath("/admin/tenants");
