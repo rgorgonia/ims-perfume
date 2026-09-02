@@ -22,11 +22,20 @@ function generateTempPassword() {
 const DEFAULT_TEMP_PASSWORD = "password123";
 
 /**
- * Reassign a store manager to a different store (or leave a store entirely).
- * Tenant owners and platform admins may do this for their own tenant. An
- * owner cannot be stripped to a store; owner is tenant-level.
+ * Assign a tenant and/or store to an existing user.
+ *
+ * - Platform admins may set both tenant and store on any user.
+ * - Tenant owners may only manage users inside their own tenant (store only;
+ *   the tenant select is hidden for them).
+ * - The store must belong to the user's (new) tenant. Changing a user's
+ *   tenant clears a store that no longer belongs to them.
+ * - Roles are not changed here; role changes happen via register/disable
+ *   flows only.
  */
-export async function reassignUserAction(prev: { error?: string }, formData: FormData) {
+export async function updateUserAssignmentAction(
+  prev: { error?: string },
+  formData: FormData
+) {
   const session = await requirePrivileged();
   const supabase = await createClient();
 
@@ -41,15 +50,39 @@ export async function reassignUserAction(prev: { error?: string }, formData: For
     .single();
   if (!user) return { error: "User not found" };
 
-  // Only touch store managers within the caller's tenant.
-  if (user.role !== "store_manager") return { error: "Only store managers can be reassigned" };
-  if (session.tenant_id && user.tenant_id !== session.tenant_id) {
-    return { error: "User not found in your tenant" };
+  const isPlatformAdmin = session.isPlatformAdmin;
+
+  // Tenant owners can only touch managers/owners within their own tenant.
+  if (!isPlatformAdmin) {
+    if (!session.tenant_id || user.tenant_id !== session.tenant_id) {
+      return { error: "User not found in your tenant" };
+    }
+  }
+
+  // Resolve the target tenant: platform admins may move the user to another
+  // tenant; everyone else keeps the user's current tenant.
+  let targetTenantId = user.tenant_id;
+  if (isPlatformAdmin) {
+    targetTenantId = String(formData.get("tenant_id") ?? "").trim() || null;
+  }
+
+  // Validate the store belongs to the target tenant.
+  let finalStoreId: string | null = storeId || null;
+  if (finalStoreId) {
+    const { data: store } = await supabase
+      .from("stores")
+      .select("tenant_id")
+      .eq("id", finalStoreId)
+      .single();
+    if (!store) return { error: "Selected store does not exist" };
+    if (!targetTenantId || store.tenant_id !== targetTenantId) {
+      return { error: "Selected store belongs to a different tenant" };
+    }
   }
 
   const { error } = await supabase
     .from("profiles")
-    .update({ store_id: storeId || null })
+    .update({ tenant_id: targetTenantId, store_id: finalStoreId })
     .eq("id", userId);
   if (error) return { error: error.message };
 

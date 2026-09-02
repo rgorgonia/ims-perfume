@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getTaxonomy } from "@/lib/services/taxonomy";
 import RegisterForm from "./register-form";
 import ResetPasswordButton from "./reset-button";
-import ReassignControl from "./reassign-control";
+import UserAssignmentControl from "./assignment-control";
 import { resetUserPasswordAction } from "./actions";
 
 type ProfileRow = {
@@ -43,9 +43,9 @@ export default async function UsersPage({
     ? supabase.from("tenants").select("id, name").order("name")
     : Promise.resolve({ data: [] as { id: string; name: string }[] });
 
-  const storeQuery = session.tenant_id
-    ? supabase.from("stores").select("id, name, tenant_id").eq("tenant_id", session.tenant_id).order("name")
-    : supabase.from("stores").select("id, name, tenant_id").order("name");
+  const storeQuery = !session.tenant_id || session.isPlatformAdmin
+    ? supabase.from("stores").select("id, name, tenant_id").order("name")
+    : supabase.from("stores").select("id, name, tenant_id").eq("tenant_id", session.tenant_id).order("name");
 
   const [{ data: profiles }, { data: stores }, { data: tenants }, taxonomy] =
     await Promise.all([profileQuery, storeQuery, tenantsQuery, getTaxonomy()]);
@@ -75,7 +75,23 @@ export default async function UsersPage({
       </section>
 
       <section className="space-y-3">
-        <h2 className="text-xl font-semibold">All users</h2>
+        <div className="flex items-baseline justify-between">
+          <h2 className="text-xl font-semibold">All users</h2>
+          {session.isPlatformAdmin && (
+            <span className="text-xs text-neutral-500 dark:text-neutral-400">
+              Use the tenant + store selects in each row to change assignments
+            </span>
+          )}
+        </div>
+        <p className="text-xs text-neutral-500 dark:text-neutral-400">
+          How assignment works: every user belongs to at most one{" "}
+          <strong>tenant</strong>; a <strong>store manager</strong> is additionally bound to one{" "}
+          <strong>store</strong> inside that tenant. A store can only be picked after a tenant is
+          set — the dropdown only lists stores of the user&apos;s tenant. Platform admins can change
+          both; tenant owners can only assign stores within their own tenant. Use{" "}
+          <strong>Register user</strong> above to create a user already bound to a store (or to
+          create a new store for them inline).
+        </p>
         <div className="overflow-x-auto rounded-2xl border border-neutral-200 bg-white dark:bg-transparent dark:border-neutral-800 dark:bg-transparent">
           <table className="w-full text-sm">
             <thead className="bg-neutral-100 text-left dark:bg-neutral-900">
@@ -98,11 +114,15 @@ export default async function UsersPage({
                   </td>
                   <td className="px-4 py-2 text-right">
                     <div className="flex items-center justify-end gap-3">
-                      {p.role === "store_manager" && (
-                        <ReassignControl
+                      {(p.role === "store_manager" || p.role === "tenant_owner") && (
+                        <UserAssignmentControl
                           userId={p.id}
-                          stores={stores ?? []}
+                          role={p.role}
+                          tenantId={p.tenant_id}
                           currentStoreId={p.store_id}
+                          stores={stores ?? []}
+                          tenants={tenants ?? []}
+                          isPlatformAdmin={session.isPlatformAdmin}
                         />
                       )}
                       <ResetPasswordButton
