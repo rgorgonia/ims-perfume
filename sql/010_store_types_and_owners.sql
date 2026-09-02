@@ -18,6 +18,12 @@ alter table public.profiles
   not null default 'manager'
   check (store_role in ('manager', 'owner'));
 
+-- At most one owner per store. When a new owner is assigned the app demotes
+-- the previous owner to inventory manager (same store), keeping this index valid.
+create unique index if not exists one_owner_per_store
+  on public.profiles (store_id)
+  where role = 'store_manager' and store_role = 'owner' and store_id is not null;
+
 -- Helper: is the caller an owner of their assigned store?
 create or replace function public.is_store_owner()
 returns boolean language sql security definer stable set search_path = public as $$

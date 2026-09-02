@@ -19,31 +19,54 @@ function parseStoreType(formData: FormData): string {
 }
 
 /**
- * Assign the chosen user as this store's manager/owner.
- * Any other manager previously bound to the store is unassigned first
- * (one manager per store). No-op when userId is empty.
+ * Assign a store owner and/or inventory manager.
+ * - Owner sees everything for the store (incl. revenue + capital).
+ * - Inventory manager(s) manage stock & sales only — no revenue.
+ * - The same user may hold both (owner wins → they see everything).
+ * - At most one owner per store: the previous owner is demoted to
+ *   inventory manager of the same store.
  */
-async function assignManager(
+async function assignStaff(
   supabase: Awaited<ReturnType<typeof createClient>>,
   storeId: string,
   formData: FormData
 ): Promise<string | null> {
-  const userId = String(formData.get("manager_user_id") ?? "");
-  const storeRole = String(formData.get("store_role") ?? "manager") === "owner" ? "owner" : "manager";
-  if (!userId) return null;
+  const ownerId = String(formData.get("owner_user_id") ?? "");
+  const managerId = String(formData.get("manager_user_id") ?? "");
+  if (!ownerId && !managerId) return null;
 
-  // Unassign anyone else currently bound to this store.
-  await supabase
-    .from("profiles")
-    .update({ store_id: null })
-    .eq("store_id", storeId)
-    .neq("id", userId);
+  const bind = async (userId: string, storeRole: "owner" | "manager") => {
+    const { error } = await supabase
+      .from("profiles")
+      .update({ store_id: storeId, role: "store_manager", store_role: storeRole })
+      .eq("id", userId);
+    if (error) throw new Error(error.message);
+  };
 
-  const { error } = await supabase
-    .from("profiles")
-    .update({ store_id: storeId, role: "store_manager", store_role: storeRole })
-    .eq("id", userId);
-  return error ? error.message : null;
+  try {
+    // Demote the previous owner (if any) before the unique index would trip.
+    const { data: prevOwners } = await supabase
+      .from("profiles")
+      .select("id")
+      .eq("store_id", storeId)
+      .eq("role", "store_manager")
+      .eq("store_role", "owner");
+    for (const p of (prevOwners ?? []) as { id: string }[]) {
+      if (ownerId && p.id !== ownerId) {
+        const { error } = await supabase
+          .from("profiles")
+          .update({ store_role: "manager" })
+          .eq("id", p.id);
+        if (error) throw new Error(error.message);
+      }
+    }
+
+    if (ownerId) await bind(ownerId, "owner");
+    if (managerId && managerId !== ownerId) await bind(managerId, "manager");
+    return null;
+  } catch (e) {
+    return e instanceof Error ? e.message : "Manager assignment failed";
+  }
 }
 
 export async function createStoreAction(
@@ -70,7 +93,7 @@ export async function createStoreAction(
     .single();
   if (error) return { error: error.message };
 
-  const assignError = await assignManager(supabase, store.id, formData);
+  const assignError = await assignStaff(supabase, store.id, formData);
   if (assignError) {
     return { success: `Store "${name}" created, but manager assignment failed: ${assignError}` };
   }
@@ -106,7 +129,7 @@ export async function updateStoreAction(
     .eq("id", id);
   if (error) return { error: error.message };
 
-  const assignError = await assignManager(supabase, id, formData);
+  const assignError = await assignStaff(supabase, id, formData);
   if (assignError) {
     return { success: `Store "${name}" updated, but manager assignment failed: ${assignError}` };
   }

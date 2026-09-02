@@ -74,17 +74,18 @@ function CategoryCheckboxes({
   );
 }
 
-/** Store type + assigned-manager controls, shared by create and edit forms. */
+/** Store type + staff assignment controls, shared by create and edit forms. */
 function StoreTypeAndManager({
   users,
   storeType,
-  currentUserId,
+  ownerId,
+  managerId,
 }: {
   users: UserOpt[];
   storeType?: string;
-  currentUserId?: string | null;
+  ownerId?: string | null;
+  managerId?: string | null;
 }) {
-  const assigned = users.find((u) => u.id === currentUserId);
   return (
     <>
       <label className="space-y-1 block">
@@ -97,35 +98,41 @@ function StoreTypeAndManager({
           ))}
         </select>
       </label>
-      <fieldset className="space-y-1">
-        <legend className="text-xs font-medium">
-          Assigned user{" "}
-          <span className="font-normal text-neutral-500">
-            — optional; they can only manage this store
-          </span>
-        </legend>
-        <select name="manager_user_id" defaultValue={currentUserId ?? ""} className={`${inputCls} w-full`}>
-          <option value="">— no one assigned —</option>
-          {users.map((u) => (
-            <option key={u.id} value={u.id}>
-              {u.full_name}
-              {u.store_id && u.id !== currentUserId ? ` (currently: ${u.role === "system_admin" ? "admin" : "another store"})` : ""}
-            </option>
-          ))}
-        </select>
-        <div className="flex flex-wrap gap-x-4 gap-y-1 pt-1">
-          <label className="flex items-center gap-1.5 text-sm text-neutral-700 dark:text-slate-300">
-            <input type="radio" name="store_role" value="manager" defaultChecked={(assigned?.store_role ?? "manager") !== "owner"} className="h-4 w-4" />
-            Inventory manager{" "}
-            <span className="font-normal text-neutral-500">(no revenue visibility)</span>
-          </label>
-          <label className="flex items-center gap-1.5 text-sm text-neutral-700 dark:text-slate-300">
-            <input type="radio" name="store_role" value="owner" defaultChecked={assigned?.store_role === "owner"} className="h-4 w-4" />
+      <div className="grid gap-3 sm:grid-cols-2">
+        <label className="space-y-1 block">
+          <span className="text-xs font-medium">
             Store owner{" "}
-            <span className="font-normal text-neutral-500">(sees revenue &amp; capital for this store)</span>
-          </label>
-        </div>
-      </fieldset>
+            <span className="font-normal text-neutral-500">— sees revenue &amp; capital</span>
+          </span>
+          <select name="owner_user_id" defaultValue={ownerId ?? ""} className={`${inputCls} w-full`}>
+            <option value="">— none —</option>
+            {users.map((u) => (
+              <option key={u.id} value={u.id}>
+                {u.full_name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="space-y-1 block">
+          <span className="text-xs font-medium">
+            Inventory manager{" "}
+            <span className="font-normal text-neutral-500">— no revenue visibility</span>
+          </span>
+          <select name="manager_user_id" defaultValue={managerId ?? ""} className={`${inputCls} w-full`}>
+            <option value="">— none —</option>
+            {users.map((u) => (
+              <option key={u.id} value={u.id}>
+                {u.full_name}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+      <p className="text-xs text-neutral-500 dark:text-slate-400">
+        The same person can hold both roles. Assigned users can only manage{" "}
+        <span className="font-medium">this</span> store; other stores&apos; data
+        stays private.
+      </p>
     </>
   );
 }
@@ -159,7 +166,8 @@ export function StoreRow({
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [upd, updAction, updPending] = useActionState(updateStoreAction, {});
   const [del, delAction, delPending] = useActionState(deleteStoreAction, {});
-  const manager = users.find((u) => u.store_id === store.id);
+  const owner = users.find((u) => u.store_id === store.id && u.store_role === "owner");
+  const manager = users.find((u) => u.store_id === store.id && u.store_role === "manager");
   const typeLabel = STORE_TYPES.find(([v]) => v === store.store_type)?.[1] ?? store.store_type;
 
   if (editing) {
@@ -176,7 +184,8 @@ export function StoreRow({
         <StoreTypeAndManager
           users={users}
           storeType={store.store_type}
-          currentUserId={manager?.id ?? null}
+          ownerId={owner?.id ?? null}
+          managerId={manager?.id ?? null}
         />
         <CategoryCheckboxes taxonomy={taxonomy} selected={store.categories} />
         <label className="flex items-center gap-2 text-sm font-medium">
@@ -216,9 +225,14 @@ export function StoreRow({
             : ` · ${store.categories.join(", ")}`}
         </p>
         <p className="text-xs text-neutral-500 dark:text-slate-400">
-          {manager
-            ? `👤 ${manager.full_name} · ${manager.store_role === "owner" ? "Store owner" : "Inventory manager"}`
-            : "No user assigned"}
+          {owner && (
+            <>
+              👑 {owner.full_name}
+              {manager && owner.id !== manager.id ? " · " : ""}
+            </>
+          )}
+          {manager && owner?.id !== manager.id && <>👤 {manager.full_name} (inventory)</>}
+          {!owner && !manager && "No users assigned"}
         </p>
       </div>
       <div className="flex flex-wrap items-center gap-2">
