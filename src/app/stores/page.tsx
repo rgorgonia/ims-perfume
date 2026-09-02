@@ -1,7 +1,12 @@
 import { requireAdmin } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { getTaxonomy } from "@/lib/services/taxonomy";
+import { getSettings } from "@/lib/settings";
+import StoreHub from "./store-hub";
 import { StoreRow, CreateStoreForm } from "./store-editor";
+import ConfigTabs from "@/app/admin/config/config-tabs";
+import TaxonomyManager from "@/app/admin/config/taxonomy-manager";
+import SystemSettings from "@/app/admin/config/system-settings";
 
 type Store = {
   id: string;
@@ -20,10 +25,18 @@ type UserRow = {
   store_id: string | null;
 };
 
-export default async function StoresPage() {
+export default async function StoresPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ tab?: string }>;
+}) {
   await requireAdmin();
   const supabase = await createClient();
-  const taxonomy = await getTaxonomy();
+  const [{ tab }, taxonomy, s] = await Promise.all([
+    searchParams,
+    getTaxonomy(),
+    getSettings(),
+  ]);
   const cats = taxonomy.categories.map((c) => ({ slug: c.slug, label: c.label }));
 
   const [{ data: stores }, { data: users }] = await Promise.all([
@@ -41,32 +54,51 @@ export default async function StoresPage() {
   const userOpts = (users ?? []) as unknown as UserRow[];
 
   return (
-    <div className="mx-auto max-w-3xl space-y-8 py-6 sm:py-8">
-      <section className="space-y-4">
-        <h1 className="text-2xl font-bold">Add store</h1>
+    <div className="mx-auto max-w-5xl space-y-6 py-6 sm:py-8">
+      <header>
+        <h1 className="text-2xl font-bold tracking-tight">Stores &amp; configuration</h1>
         <p className="text-sm text-neutral-500 dark:text-slate-400">
-          Pick the store type and the categories it sells, then optionally assign
-          a user. An assigned <span className="font-medium">inventory manager</span> can
-          only manage this store (no revenue); a{" "}
-          <span className="font-medium">store owner</span> also sees its revenue
-          and capital.
+          Create and edit stores (type, categories sold, and the users assigned
+          to them), and manage the platform-wide configuration.
         </p>
-        <CreateStoreForm taxonomy={cats} users={userOpts} />
-      </section>
+      </header>
+      <StoreHub
+        initial={tab === "config" ? "config" : "stores"}
+        storesPanel={
+          <div className="space-y-8">
+            <section className="space-y-4">
+              <h2 className="text-xl font-semibold">Add store</h2>
+              <p className="text-sm text-neutral-500 dark:text-slate-400">
+                Pick the store type and categories it sells, then assign one
+                owner and any number of inventory managers. An owner sees that
+                store&apos;s revenue &amp; capital; inventory managers handle
+                stock &amp; sales only.
+              </p>
+              <CreateStoreForm taxonomy={cats} users={userOpts} />
+            </section>
 
-      <section className="space-y-3">
-        <h2 className="text-xl font-semibold">All stores</h2>
-        <div className="overflow-hidden rounded-2xl border border-neutral-200 bg-white dark:bg-transparent dark:border-neutral-800">
-          {(stores ?? []).map((s) => (
-            <StoreRow key={s.id} store={s as Store} taxonomy={cats} users={userOpts} />
-          ))}
-          {(stores ?? []).length === 0 && (
-            <p className="p-6 text-center text-sm text-neutral-500">
-              No stores yet — add your first one above.
-            </p>
-          )}
-        </div>
-      </section>
+            <section className="space-y-3">
+              <h2 className="text-xl font-semibold">All stores</h2>
+              <div className="overflow-hidden rounded-2xl border border-neutral-200 bg-white dark:bg-transparent dark:border-neutral-800">
+                {(stores ?? []).map((s) => (
+                  <StoreRow key={s.id} store={s as Store} taxonomy={cats} users={userOpts} />
+                ))}
+                {(stores ?? []).length === 0 && (
+                  <p className="p-6 text-center text-sm text-neutral-500">
+                    No stores yet — add your first one above.
+                  </p>
+                )}
+              </div>
+            </section>
+          </div>
+        }
+        configPanel={
+          <ConfigTabs
+            taxonomy={<TaxonomyManager taxonomy={taxonomy} />}
+            system={<SystemSettings s={s} />}
+          />
+        }
+      />
     </div>
   );
 }

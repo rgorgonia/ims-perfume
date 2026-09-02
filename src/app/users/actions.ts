@@ -22,6 +22,60 @@ function generateTempPassword() {
 /** Default password an admin resets a user to. The user should change it in Settings. */
 const DEFAULT_TEMP_PASSWORD = "password123";
 
+/**
+ * Reassign a user to a different store (or leave a store entirely) from the
+ * Users page. Empty store_id = remove from store. The role column is preserved
+ * (an admin stays an admin); only store_id + store_role change.
+ * If the user is made the owner of another store, the previous owner of that
+ * store is demoted to inventory manager (keeps one-owner-per-store).
+ */
+export async function reassignUserAction(prev: { error?: string }, formData: FormData) {
+  await requireAdmin();
+  const supabase = await createClient();
+
+  const userId = String(formData.get("user_id") ?? "").trim();
+  const storeId = String(formData.get("store_id") ?? "").trim();
+  const storeRole =
+    String(formData.get("store_role") ?? "manager") === "owner" ? "owner" : "manager";
+  if (!userId) return { error: "Missing user" };
+
+  const { data: user } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", userId)
+    .single();
+  if (!user) return { error: "User not found" };
+  if (user.role === "system_admin" && storeId) {
+    // Allow binding an admin to a store (they keep admin + gain that store's scope).
+  }
+
+  try {
+    // If assigning as owner, demote the previous owner of the target store.
+    if (storeId && storeRole === "owner") {
+      const { data: prevOwners } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("store_id", storeId)
+        .eq("store_role", "owner")
+        .neq("id", userId);
+      for (const p of (prevOwners ?? []) as { id: string }[]) {
+        await supabase.from("profiles").update({ store_role: "manager" }).eq("id", p.id);
+      }
+    }
+    const { error } = await supabase.from("profiles").update({
+      store_id: storeId || null,
+      store_role: storeId ? storeRole : "manager",
+    }).eq("id", userId);
+    if (error) return { error: error.message };
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : "Reassign failed" };
+  }
+
+  revalidatePath("/users");
+  revalidatePath("/stores");
+  return { error: undefined };
+}
+
 export async function resetUserPasswordAction(formData: FormData) {
   await requireAdmin();
   const userId = String(formData.get("user_id") ?? "").trim();

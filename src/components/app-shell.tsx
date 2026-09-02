@@ -35,7 +35,7 @@ const NAV_ITEMS: Item[] = [
   { href: "/stores", label: "Stores", icon: Store },
   { href: "/users", label: "Users", icon: Users },
   { href: "/capital", label: "Capital", admin: true, icon: Wallet },
-  { href: "/admin/config", label: "Configuration", admin: true, icon: SlidersHorizontal },
+  { href: "/stores?tab=config", label: "Configuration", admin: true, icon: SlidersHorizontal },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 

@@ -3,6 +3,7 @@ import { requireAdmin } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import RegisterForm from "./register-form";
 import ResetPasswordButton from "./reset-button";
+import ReassignControl from "./reassign-control";
 import { resetUserPasswordAction } from "./actions";
 
 type Store = { id: string; name: string };
@@ -82,6 +83,12 @@ export default async function UsersPage({
                   </td>
                   <td className="px-4 py-2 text-right">
                     <div className="flex items-center justify-end gap-3">
+                      <ReassignControl
+                        userId={p.id}
+                        stores={stores ?? []}
+                        currentStoreId={p.store_id}
+                        currentRole={p.store_role}
+                      />
                       <ResetPasswordButton
                         action={resetUserPasswordAction}
                         userId={p.id}

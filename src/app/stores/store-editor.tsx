@@ -79,13 +79,14 @@ function StoreTypeAndManager({
   users,
   storeType,
   ownerId,
-  managerId,
+  managerIds,
 }: {
   users: UserOpt[];
   storeType?: string;
   ownerId?: string | null;
-  managerId?: string | null;
+  managerIds?: string[];
 }) {
+  const chosen = new Set(managerIds ?? []);
   return (
     <>
       <label className="space-y-1 block">
@@ -98,40 +99,49 @@ function StoreTypeAndManager({
           ))}
         </select>
       </label>
-      <div className="grid gap-3 sm:grid-cols-2">
-        <label className="space-y-1 block">
-          <span className="text-xs font-medium">
-            Store owner{" "}
-            <span className="font-normal text-neutral-500">— sees revenue &amp; capital</span>
+      <label className="space-y-1 block">
+        <span className="text-xs font-medium">
+          Store owner{" "}
+          <span className="font-normal text-neutral-500">— sees revenue &amp; capital</span>
+        </span>
+        <select name="owner_user_id" defaultValue={ownerId ?? ""} className={`${inputCls} w-full`}>
+          <option value="">— none —</option>
+          {users.map((u) => (
+            <option key={u.id} value={u.id}>
+              {u.full_name}
+            </option>
+          ))}
+        </select>
+      </label>
+      <fieldset className="space-y-1">
+        <legend className="text-xs font-medium">
+          Inventory managers{" "}
+          <span className="font-normal text-neutral-500">
+            — any number, no revenue visibility; pick all that apply
           </span>
-          <select name="owner_user_id" defaultValue={ownerId ?? ""} className={`${inputCls} w-full`}>
-            <option value="">— none —</option>
-            {users.map((u) => (
-              <option key={u.id} value={u.id}>
-                {u.full_name}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="space-y-1 block">
-          <span className="text-xs font-medium">
-            Inventory manager{" "}
-            <span className="font-normal text-neutral-500">— no revenue visibility</span>
-          </span>
-          <select name="manager_user_id" defaultValue={managerId ?? ""} className={`${inputCls} w-full`}>
-            <option value="">— none —</option>
-            {users.map((u) => (
-              <option key={u.id} value={u.id}>
-                {u.full_name}
-              </option>
-            ))}
-          </select>
-        </label>
-      </div>
+        </legend>
+        <div className="flex flex-wrap gap-x-4 gap-y-1.5">
+          {users.map((u) => (
+            <label
+              key={u.id}
+              className="flex items-center gap-1.5 text-sm text-neutral-700 dark:text-slate-300"
+            >
+              <input
+                type="checkbox"
+                name="manager_users"
+                value={u.id}
+                defaultChecked={chosen.has(u.id)}
+                className="h-4 w-4"
+              />
+              {u.full_name}
+            </label>
+          ))}
+        </div>
+      </fieldset>
       <p className="text-xs text-neutral-500 dark:text-slate-400">
-        The same person can hold both roles. Assigned users can only manage{" "}
-        <span className="font-medium">this</span> store; other stores&apos; data
-        stays private.
+        The same person can be both owner and manager. Anyone assigned here is
+        bound to this store (other stores&apos; data stays private), and can be
+        moved/reassigned again from the Users page.
       </p>
     </>
   );
@@ -166,8 +176,9 @@ export function StoreRow({
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [upd, updAction, updPending] = useActionState(updateStoreAction, {});
   const [del, delAction, delPending] = useActionState(deleteStoreAction, {});
-  const owner = users.find((u) => u.store_id === store.id && u.store_role === "owner");
-  const manager = users.find((u) => u.store_id === store.id && u.store_role === "manager");
+  const members = users.filter((u) => u.store_id === store.id);
+  const owner = members.find((u) => u.store_role === "owner");
+  const managers = members.filter((u) => u.store_role === "manager");
   const typeLabel = STORE_TYPES.find(([v]) => v === store.store_type)?.[1] ?? store.store_type;
 
   if (editing) {
@@ -185,7 +196,7 @@ export function StoreRow({
           users={users}
           storeType={store.store_type}
           ownerId={owner?.id ?? null}
-          managerId={manager?.id ?? null}
+          managerIds={managers.map((m) => m.id)}
         />
         <CategoryCheckboxes taxonomy={taxonomy} selected={store.categories} />
         <label className="flex items-center gap-2 text-sm font-medium">
@@ -225,14 +236,13 @@ export function StoreRow({
             : ` · ${store.categories.join(", ")}`}
         </p>
         <p className="text-xs text-neutral-500 dark:text-slate-400">
-          {owner && (
-            <>
-              👑 {owner.full_name}
-              {manager && owner.id !== manager.id ? " · " : ""}
-            </>
-          )}
-          {manager && owner?.id !== manager.id && <>👤 {manager.full_name} (inventory)</>}
-          {!owner && !manager && "No users assigned"}
+          {members.length === 0
+            ? "No users assigned"
+            : members
+                .map((m) =>
+                  m.store_role === "owner" ? `👑 ${m.full_name}` : `👤 ${m.full_name}`
+                )
+                .join(" · ")}
         </p>
       </div>
       <div className="flex flex-wrap items-center gap-2">
