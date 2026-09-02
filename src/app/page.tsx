@@ -84,9 +84,14 @@ export default async function Dashboard() {
   const summaries = [...storeMap.values()].sort((a, b) =>
     a.name.localeCompare(b.name)
   );
-  const chart = [...byDay.entries()]
-    .sort(([a], [b]) => a.localeCompare(b))
-    .slice(-14);
+  // Zero-filled last-14-days series (days with no sales still get a slot)
+  const chart: [string, number][] = [];
+  for (let i = 13; i >= 0; i--) {
+    const d = new Date();
+    d.setUTCDate(d.getUTCDate() - i);
+    const key = d.toISOString().slice(0, 10);
+    chart.push([key, byDay.get(key) ?? 0]);
+  }
   const maxDay = Math.max(...chart.map(([, v]) => v), 1);
 
   // Low stock: quantity at/below each variant's threshold
@@ -186,10 +191,10 @@ export default async function Dashboard() {
                     title={`${day}: ${peso(revenue)}`}
                   >
                     <div
-                      className="w-full bg-foreground/80 transition-colors group-hover:bg-foreground"
-                      style={{ height: `${Math.max((revenue / maxDay) * 100, 2)}%` }}
+                      className="w-full rounded-t-[3px] bg-foreground/70 transition-colors group-hover:bg-foreground"
+                      style={{ height: `${revenue > 0 ? Math.max((revenue / maxDay) * 100, 4) : 2}%` }}
                     />
-                    <span className="text-[10px] text-neutral-500">
+                    <span className="text-[9px] text-neutral-400">
                       {day.slice(5)}
                     </span>
                   </div>

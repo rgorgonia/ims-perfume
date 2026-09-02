@@ -98,8 +98,8 @@ export default function AppShell({
   return (
     <div className="min-h-dvh">
       {/* Desktop sidebar — floating glass pane (spatial, both themes) */}
-      <aside className="fixed inset-y-0 left-0 z-40 hidden w-64 flex-col gap-4 border-r border-black/[0.08] bg-white/70 px-4 py-6 backdrop-blur-md md:flex md:inset-y-4 md:left-4 md:rounded-[28px] md:border md:border-white/60 md:shadow-[0_8px_32px_rgba(30,50,40,0.1)] md:dark:inset-y-4 md:dark:left-4 md:dark:rounded-[28px] md:dark:border md:dark:border-white/15 md:dark:bg-white/5 md:dark:shadow-[0_8px_32px_rgba(0,0,0,0.4)]">
-        <div className="flex items-center gap-2.5 px-2">
+      <aside className="fixed inset-y-0 left-0 z-40 hidden w-64 flex-col gap-3 overflow-hidden border-r border-black/[0.08] bg-white/70 px-4 py-6 backdrop-blur-md md:flex md:inset-y-4 md:left-4 md:rounded-[28px] md:border md:border-white/60 md:shadow-[0_8px_32px_rgba(30,50,40,0.1)] md:dark:inset-y-4 md:dark:left-4 md:dark:rounded-[28px] md:dark:border md:dark:border-white/15 md:dark:bg-white/5 md:dark:shadow-[0_8px_32px_rgba(0,0,0,0.4)]">
+        <div className="flex shrink-0 items-center gap-2.5 px-2">
           <span className="flex h-9 w-9 items-center justify-center rounded-[10px] bg-neutral-900 font-semibold text-white dark:bg-white dark:text-neutral-900">
             {(businessName || "I").trim().charAt(0).toUpperCase()}
           </span>
@@ -107,7 +107,7 @@ export default function AppShell({
             {businessName}
           </span>
         </div>
-        <div className="space-y-1 px-2">
+        <div className="shrink-0 space-y-1 px-2">
           <span className="inline-flex items-center gap-1.5 rounded-full border border-black/[0.08] bg-black/[0.03] px-2.5 py-1 text-[11px] font-medium text-neutral-600 dark:border-white/10 dark:bg-white/[0.06] dark:text-slate-300">
             <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
             {tenantName ?? "Platform"}
@@ -117,14 +117,14 @@ export default function AppShell({
             {roleLabel}
           </span>
         </div>
-        <div className="px-2">
+        <div className="shrink-0 px-2">
           <input
             type="search"
             placeholder="Ask or Search..."
             className="min-h-9 w-full rounded-lg border border-black/[0.08] bg-black/[0.04] px-3 text-[13px] text-neutral-800 placeholder:text-neutral-400 focus:border-neutral-500/60 focus:bg-white focus:outline-none dark:border-white/10 dark:bg-white/[0.06] dark:text-slate-200"
           />
         </div>
-        <nav className="flex flex-col gap-0.5">
+        <nav className="flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto pb-2">
           {items.map((item) => {
             const active = isActive(pathname, item.href);
             const Icon = item.icon;
@@ -151,7 +151,7 @@ export default function AppShell({
             );
           })}
         </nav>
-        <div className="mt-auto space-y-2 border-t border-black/[0.08] px-2 pt-4 dark:border-white/10">
+        <div className="shrink-0 space-y-2 border-t border-black/[0.08] px-2 pt-3 dark:border-white/10">
           <button
             onClick={toggleTheme}
             className="flex min-h-9 w-full items-center justify-between rounded-lg border border-black/[0.08] px-3 text-[13px] text-neutral-600 hover:bg-black/[0.04] dark:border-white/10 dark:text-slate-300 dark:hover:bg-white/[0.06]"
