@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getSettings, formatMoney } from "@/lib/settings";
 import { getTaxonomy } from "@/lib/services/taxonomy";
 import { parseVariantAttributes } from "@/lib/attributes";
-import CategoryAttributeFields from "@/components/category-attribute-fields";
+import AddProductForm from "./add-product-form";
 
 type Variant = {
   id: string;
@@ -24,7 +24,12 @@ type Product = {
   product_variants: Variant[];
 };
 
-async function createProduct(formData: FormData) {
+export type ProductResult = { error?: string; success?: string };
+
+async function createProduct(
+  _prev: ProductResult,
+  formData: FormData
+): Promise<ProductResult> {
   "use server";
   const session = await requireUser();
   const supabase = await createClient();
@@ -38,7 +43,8 @@ async function createProduct(formData: FormData) {
   const isAdmin = session.profile?.role === "system_admin";
   const costPrice = isAdmin ? Number(formData.get("cost_price") ?? 0) : 0;
 
-  if (!name || !sku || !sizeMl) return;
+  if (!name || !sku || !sizeMl)
+    return { error: "Product name, SKU and size are required." };
 
   // Dynamic attributes from the taxonomy-generated fields (JSONB on the variant).
   const taxonomy = await getTaxonomy();
@@ -59,9 +65,10 @@ async function createProduct(formData: FormData) {
     })
     .select("id")
     .single();
-  if (error || !product) return;
+  if (error || !product)
+    return { error: error?.message ?? "Could not create the product." };
 
-  await supabase.from("product_variants").insert({
+  const { error: varError } = await supabase.from("product_variants").insert({
     product_id: product.id,
     sku,
     size_ml: sizeMl,
@@ -69,8 +76,17 @@ async function createProduct(formData: FormData) {
     retail_price: retailPrice,
     attributes,
   });
+  if (varError) {
+    // A product with no variant is invisible to Inventory/Sales. Roll the
+    // parent back so we never leave an orphan (a product that can't be sold).
+    await supabase.from("products").delete().eq("id", product.id);
+    return { error: varError.message };
+  }
 
   revalidatePath("/products");
+  revalidatePath("/inventory");
+  revalidatePath("/sales");
+  return { success: `Product "${name}" created with its first variant.` };
 }
 
 export default async function ProductsPage() {
@@ -115,59 +131,16 @@ export default async function ProductsPage() {
       0
     );
 
-  const inputCls =
-    "rounded-[10px] border border-black/10 px-3 py-2 text-sm dark:border-neutral-700 dark:bg-transparent";
-
   return (
     <div className="mx-auto max-w-5xl space-y-8 py-6 sm:py-8">
       <section className="space-y-4">
         <h1 className="text-2xl font-bold">Add product</h1>
-        <form
+        <AddProductForm
           action={createProduct}
-          className="grid gap-3 rounded-2xl border border-neutral-200 bg-white dark:bg-transparent p-4 sm:grid-cols-3 dark:border-neutral-800"
-        >
-          <input name="name" required placeholder="Product name *" className={inputCls} />
-          <input name="brand" placeholder="Brand" className={inputCls} />
-          <CategoryAttributeFields taxonomy={taxonomy} />
-          <input
-            name="sku"
-            required
-            placeholder="SKU for first variant *"
-            className={inputCls}
-          />
-          <input
-            name="size_ml"
-            required
-            type="number"
-            min="1"
-            placeholder={`Size (${sizeUnit}) *`}
-            className={inputCls}
-          />
-          <input
-            name="retail_price"
-            type="number"
-            step="0.01"
-            min="0"
-            placeholder="Retail price"
-            className={inputCls}
-          />
-          {isAdmin && (
-            <input
-              name="cost_price"
-              type="number"
-              step="0.01"
-              min="0"
-              placeholder="Cost price (admin)"
-              className={inputCls}
-            />
-          )}
-          <button
-            type="submit"
-            className="rounded-2xl btn-neon px-4 py-2 text-sm font-medium transition-opacity hover:opacity-80 sm:col-span-3"
-          >
-            Create product
-          </button>
-        </form>
+          taxonomy={taxonomy}
+          sizeUnit={sizeUnit}
+          isAdmin={isAdmin}
+        />
       </section>
 
       <section className="space-y-3">
@@ -206,14 +179,23 @@ export default async function ProductsPage() {
                     </td>
                     <td className="px-4 py-2">{p.concentration ?? "—"}</td>
                     <td className="px-4 py-2">
-                      {(p.product_variants ?? [])
-                        .map(
-                          (v) =>
-                            `${v.sku} (${v.size_ml}${sizeUnit}) · ${
-                              availByVariant.get(v.id) ?? 0
-                            } left`
-                        )
-                        .join(", ") || "—"}
+                      {(p.product_variants ?? []).length === 0 ? (
+                        <Link
+                          href={`/products/${p.id}`}
+                          className="text-amber-600 underline decoration-dotted underline-offset-2 hover:text-amber-700 dark:text-amber-400"
+                        >
+                          No variant yet — add one
+                        </Link>
+                      ) : (
+                        (p.product_variants ?? [])
+                          .map(
+                            (v) =>
+                              `${v.sku} (${v.size_ml}${sizeUnit}) · ${
+                                availByVariant.get(v.id) ?? 0
+                              } left`
+                          )
+                          .join(", ")
+                      )}
                     </td>
                     <td className="px-4 py-2">
                       <span
