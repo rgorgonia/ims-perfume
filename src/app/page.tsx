@@ -182,7 +182,7 @@ export default async function Dashboard() {
                 {chart.map(([day, revenue]) => (
                   <div
                     key={day}
-                    className="group flex flex-1 flex-col items-center gap-1"
+                    className="group flex h-full flex-1 flex-col items-center justify-end gap-1"
                     title={`${day}: ${peso(revenue)}`}
                   >
                     <div
