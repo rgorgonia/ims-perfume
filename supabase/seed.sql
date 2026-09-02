@@ -20,18 +20,23 @@ from (values
 ) as v(id, email, pass, full_name)
 where not exists (select 1 from auth.users u where u.email = v.email);
 
--- 2) Profiles (admin / admin / inventory manager)
-insert into public.profiles (id, full_name, role, store_role)
+-- 2) Demo tenant
+insert into public.tenants (id, name, slug)
+values ('55555555-5555-5555-5555-555555555555', 'Demo Tenant', 'demo')
+on conflict (slug) do nothing;
+
+-- 3) Profiles (admin / admin / store manager)
+insert into public.profiles (id, full_name, role, tenant_id)
 values
-  ('11111111-1111-1111-1111-111111111111', 'Local Admin', 'system_admin', 'manager'),
-  ('22222222-2222-2222-2222-222222222222', 'Ronald Gorgonia', 'system_admin', 'manager'),
-  ('33333333-3333-3333-3333-333333333333', 'Test Manager', 'store_manager', 'manager')
+  ('11111111-1111-1111-1111-111111111111', 'Local Admin', 'platform_admin', null),
+  ('22222222-2222-2222-2222-222222222222', 'Ronald Gorgonia', 'platform_admin', null),
+  ('33333333-3333-3333-3333-333333333333', 'Test Manager', 'store_manager', '55555555-5555-5555-5555-555555555555')
 on conflict (id) do nothing;
 
--- 3) A demo store for the manager account
-insert into public.stores (id, name, store_type)
-values ('44444444-4444-4444-4444-444444444444', 'Test Store', 'physical')
-on conflict (name) do nothing;
+-- 4) A demo store for the manager account
+insert into public.stores (id, tenant_id, name, store_type)
+select '44444444-4444-4444-4444-444444444444', '55555555-5555-5555-5555-555555555555', 'Test Store', 'physical'
+where not exists (select 1 from public.stores where id = '44444444-4444-4444-4444-444444444444');
 
 update public.profiles
 set store_id = '44444444-4444-4444-4444-444444444444'
