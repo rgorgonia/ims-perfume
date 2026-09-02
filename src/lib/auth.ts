@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 export type Profile = {
   full_name: string;
   role: "system_admin" | "store_manager";
+  store_role: "manager" | "owner";
   store_id: string | null;
   is_active: boolean;
 };
@@ -21,7 +22,7 @@ export async function getSession(): Promise<{
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("full_name, role, store_id, is_active")
+    .select("full_name, role, store_role, store_id, is_active")
     .eq("id", user.id)
     .single();
 

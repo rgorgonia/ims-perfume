@@ -48,6 +48,8 @@ export async function registerUserAction(
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
   const role = String(formData.get("role") ?? "store_manager");
   const storeId = String(formData.get("store_id") ?? "");
+  const storeRole =
+    String(formData.get("store_role") ?? "manager") === "owner" ? "owner" : "manager";
 
   if (!fullName || !email) return { error: "Name and email are required" };
 
@@ -68,6 +70,7 @@ export async function registerUserAction(
     id: data.user.id,
     full_name: fullName,
     role,
+    store_role: storeRole,
     store_id: role === "store_manager" && storeId ? storeId : null,
   });
   if (profileError) {

@@ -9,6 +9,7 @@ import {
 } from "./actions";
 
 type Cat = { slug: string; label: string };
+type UserOpt = { id: string; full_name: string; role: string; store_role: string; store_id: string | null };
 
 type StoreT = {
   id: string;
@@ -16,7 +17,15 @@ type StoreT = {
   address: string | null;
   is_active: boolean;
   categories: string[] | null;
+  store_type: string;
 };
+
+const STORE_TYPES: [string, string][] = [
+  ["physical", "Physical store"],
+  ["online", "Online shop"],
+  ["kiosk", "Kiosk / mall cart"],
+  ["warehouse", "Warehouse"],
+];
 
 const inputCls =
   "rounded-[10px] border border-black/10 px-3 py-2 text-sm dark:border-neutral-700 dark:bg-transparent";
@@ -65,6 +74,62 @@ function CategoryCheckboxes({
   );
 }
 
+/** Store type + assigned-manager controls, shared by create and edit forms. */
+function StoreTypeAndManager({
+  users,
+  storeType,
+  currentUserId,
+}: {
+  users: UserOpt[];
+  storeType?: string;
+  currentUserId?: string | null;
+}) {
+  const assigned = users.find((u) => u.id === currentUserId);
+  return (
+    <>
+      <label className="space-y-1 block">
+        <span className="text-xs font-medium">Store type</span>
+        <select name="store_type" defaultValue={storeType ?? "physical"} className={`${inputCls} w-full`}>
+          {STORE_TYPES.map(([value, label]) => (
+            <option key={value} value={value}>
+              {label}
+            </option>
+          ))}
+        </select>
+      </label>
+      <fieldset className="space-y-1">
+        <legend className="text-xs font-medium">
+          Assigned user{" "}
+          <span className="font-normal text-neutral-500">
+            — optional; they can only manage this store
+          </span>
+        </legend>
+        <select name="manager_user_id" defaultValue={currentUserId ?? ""} className={`${inputCls} w-full`}>
+          <option value="">— no one assigned —</option>
+          {users.map((u) => (
+            <option key={u.id} value={u.id}>
+              {u.full_name}
+              {u.store_id && u.id !== currentUserId ? ` (currently: ${u.role === "system_admin" ? "admin" : "another store"})` : ""}
+            </option>
+          ))}
+        </select>
+        <div className="flex flex-wrap gap-x-4 gap-y-1 pt-1">
+          <label className="flex items-center gap-1.5 text-sm text-neutral-700 dark:text-slate-300">
+            <input type="radio" name="store_role" value="manager" defaultChecked={(assigned?.store_role ?? "manager") !== "owner"} className="h-4 w-4" />
+            Inventory manager{" "}
+            <span className="font-normal text-neutral-500">(no revenue visibility)</span>
+          </label>
+          <label className="flex items-center gap-1.5 text-sm text-neutral-700 dark:text-slate-300">
+            <input type="radio" name="store_role" value="owner" defaultChecked={assigned?.store_role === "owner"} className="h-4 w-4" />
+            Store owner{" "}
+            <span className="font-normal text-neutral-500">(sees revenue &amp; capital for this store)</span>
+          </label>
+        </div>
+      </fieldset>
+    </>
+  );
+}
+
 function Msg({ state }: { state: StoreActionState }) {
   if (!state.error && !state.success) return null;
   return (
@@ -81,11 +146,21 @@ function Msg({ state }: { state: StoreActionState }) {
 }
 
 /** One store row: inline edit form + two-click delete. */
-export function StoreRow({ store, taxonomy }: { store: StoreT; taxonomy: Cat[] }) {
+export function StoreRow({
+  store,
+  taxonomy,
+  users,
+}: {
+  store: StoreT;
+  taxonomy: Cat[];
+  users: UserOpt[];
+}) {
   const [editing, setEditing] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [upd, updAction, updPending] = useActionState(updateStoreAction, {});
   const [del, delAction, delPending] = useActionState(deleteStoreAction, {});
+  const manager = users.find((u) => u.store_id === store.id);
+  const typeLabel = STORE_TYPES.find(([v]) => v === store.store_type)?.[1] ?? store.store_type;
 
   if (editing) {
     return (
@@ -98,6 +173,11 @@ export function StoreRow({ store, taxonomy }: { store: StoreT; taxonomy: Cat[] }
           <input name="name" required defaultValue={store.name} placeholder="Store name *" className={inputCls} />
           <input name="address" defaultValue={store.address ?? ""} placeholder="Address (optional)" className={inputCls} />
         </div>
+        <StoreTypeAndManager
+          users={users}
+          storeType={store.store_type}
+          currentUserId={manager?.id ?? null}
+        />
         <CategoryCheckboxes taxonomy={taxonomy} selected={store.categories} />
         <label className="flex items-center gap-2 text-sm font-medium">
           <input
@@ -129,10 +209,16 @@ export function StoreRow({ store, taxonomy }: { store: StoreT; taxonomy: Cat[] }
           {!store.is_active && <span className="ml-2 text-xs text-red-500">inactive</span>}
         </p>
         <p className="truncate text-xs text-neutral-500 dark:text-slate-400">
-          {store.address ? `${store.address} · ` : ""}
+          {typeLabel}
+          {store.address ? ` · ${store.address}` : ""}
           {!store.categories || store.categories.length === 0
-            ? "All categories"
-            : store.categories.join(", ")}
+            ? " · All categories"
+            : ` · ${store.categories.join(", ")}`}
+        </p>
+        <p className="text-xs text-neutral-500 dark:text-slate-400">
+          {manager
+            ? `👤 ${manager.full_name} · ${manager.store_role === "owner" ? "Store owner" : "Inventory manager"}`
+            : "No user assigned"}
         </p>
       </div>
       <div className="flex flex-wrap items-center gap-2">
@@ -171,7 +257,13 @@ export function NewStoreCategories({ taxonomy }: { taxonomy: Cat[] }) {
 }
 
 /** Full create-store form (client — wires useActionState feedback). */
-export function CreateStoreForm({ taxonomy }: { taxonomy: Cat[] }) {
+export function CreateStoreForm({
+  taxonomy,
+  users,
+}: {
+  taxonomy: Cat[];
+  users: UserOpt[];
+}) {
   const [state, action, pending] = useActionState(createStoreAction, {});
   return (
     <form
@@ -182,6 +274,7 @@ export function CreateStoreForm({ taxonomy }: { taxonomy: Cat[] }) {
         <input name="name" required placeholder="Store name *" className={inputCls} />
         <input name="address" placeholder="Address (optional)" className={inputCls} />
       </div>
+      <StoreTypeAndManager users={users} />
       <CategoryCheckboxes taxonomy={taxonomy} selected={null} />
       <div className="flex flex-wrap items-center gap-3">
         <button

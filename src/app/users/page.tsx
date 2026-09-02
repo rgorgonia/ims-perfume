@@ -10,6 +10,7 @@ type ProfileRow = {
   id: string;
   full_name: string;
   role: string;
+  store_role: string;
   is_active: boolean;
   store_id: string | null;
   stores: { name: string } | null;
@@ -28,7 +29,7 @@ export default async function UsersPage({
   const [{ data: profiles }, { data: stores }] = await Promise.all([
     supabase
       .from("profiles")
-      .select("id, full_name, role, is_active, store_id, stores(name)")
+      .select("id, full_name, role, store_role, is_active, store_id, stores(name)")
       .order("created_at", { ascending: true }),
     supabase.from("stores").select("id, name").order("name"),
   ]);
@@ -69,7 +70,12 @@ export default async function UsersPage({
               {((profiles ?? []) as unknown as ProfileRow[]).map((p) => (
                 <tr key={p.id} className="border-t border-neutral-200 dark:border-neutral-800">
                   <td className="px-4 py-2 font-medium">{p.full_name}</td>
-                  <td className="px-4 py-2 capitalize">{p.role.replace("_", " ")}</td>
+                  <td className="px-4 py-2 capitalize">
+                    {p.role.replace("_", " ")}
+                    {p.role === "store_manager" && p.store_role === "owner" && (
+                      <span className="ml-1 text-xs text-neutral-500">(owner)</span>
+                    )}
+                  </td>
                   <td className="px-4 py-2">{p.stores?.name ?? "—"}</td>
                   <td className="px-4 py-2">
                     {p.is_active ? "Active" : "Disabled"}

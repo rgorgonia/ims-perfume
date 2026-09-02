@@ -24,13 +24,19 @@ export default async function Dashboard() {
   const session = await requireUser();
   const supabase = await createClient();
   const isAdmin = session.profile?.role === "system_admin";
+  // Inventory managers don't see revenue; store owners (of their store) and admins do.
+  const canSeeRevenue = isAdmin || session.profile?.store_role === "owner";
   const { currencySymbol, currencyLocale } = await getSettings();
   const peso = (n: number) => formatMoney(n, currencySymbol, currencyLocale);
 
+  const since30d = new Date(Date.now() - 30 * 24 * 3600 * 1000).toISOString();
+
   // All independent queries run in ONE parallel round-trip batch.
   // The RPC aggregates every RLS-visible store in a single DB call.
-  const [summaryRes, invRes, salesRes, capitalRes] = await Promise.all([
-    supabase.rpc("store_sales_summary_all", { p_days: 30 }),
+  const [summaryRes, invRes, salesRes, capitalRes, salesCountRes] = await Promise.all([
+    canSeeRevenue
+      ? supabase.rpc("store_sales_summary_all", { p_days: 30 })
+      : Promise.resolve({ data: null } as { data: unknown[] | null }),
     supabase.from("inventory_levels").select(
       "quantity_on_hand, store_id, product_variants(sku, low_stock_threshold, products(name))"
     ),
@@ -42,6 +48,12 @@ export default async function Dashboard() {
     isAdmin
       ? supabase.from("capital_ledger").select("amount")
       : Promise.resolve({ data: null } as { data: { amount: number }[] | null }),
+    canSeeRevenue
+      ? Promise.resolve({ count: null as number | null })
+      : supabase
+          .from("sales_transactions")
+          .select("id", { count: "exact", head: true })
+          .gte("created_at", since30d),
   ]);
 
   type AllRow = {
@@ -118,14 +130,23 @@ export default async function Dashboard() {
       {/* Stat cards */}
       <FadeIn delay={0.1}>
       <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <div className={statCls}>
-          <p className="text-xs text-neutral-500">Revenue (30d)</p>
-          <p className="text-xl font-bold text-neutral-900 dark:text-white"><Ticker value={totalRevenue} currencySymbol={currencySymbol} currencyLocale={currencyLocale} /></p>
-        </div>
-        <div className={statCls}>
-          <p className="text-xs text-neutral-500">Gross profit (30d)</p>
-          <p className="text-xl font-bold">{peso(totalProfit)}</p>
-        </div>
+        {canSeeRevenue ? (
+          <>
+            <div className={statCls}>
+              <p className="text-xs text-neutral-500">Revenue (30d)</p>
+              <p className="text-xl font-bold text-neutral-900 dark:text-white"><Ticker value={totalRevenue} currencySymbol={currencySymbol} currencyLocale={currencyLocale} /></p>
+            </div>
+            <div className={statCls}>
+              <p className="text-xs text-neutral-500">Gross profit (30d)</p>
+              <p className="text-xl font-bold">{peso(totalProfit)}</p>
+            </div>
+          </>
+        ) : (
+          <div className={statCls}>
+            <p className="text-xs text-neutral-500">Sales recorded (30d)</p>
+            <p className="text-xl font-bold">{salesCountRes.count ?? 0}</p>
+          </div>
+        )}
         <div className={statCls}>
           <p className="text-xs text-neutral-500">Low-stock items</p>
           <p className="text-xl font-bold">{lowStock.length}</p>
@@ -139,82 +160,86 @@ export default async function Dashboard() {
           </div>
         ) : (
           <div className={statCls}>
-            <p className="text-xs text-neutral-500">Stores visible</p>
-            <p className="text-xl font-bold">{summaries.length}</p>
+            <p className="text-xs text-neutral-500">{canSeeRevenue ? "Stores visible" : "Recent sales"}</p>
+            <p className="text-xl font-bold">{canSeeRevenue ? summaries.length : (sales ?? []).length}</p>
           </div>
         )}
       </section>
       </FadeIn>
 
-      {/* Daily revenue chart */}
-      <FadeIn delay={0.2}>
-      <section className="space-y-3">
-        <h2 className="text-lg font-semibold">Daily revenue (last 14 days)</h2>
-        <div className="card-lift soft rounded-[18px] border border-neutral-200 p-5 dark:border-white/5">
-          {chart.length === 0 ? (
-            <p className="py-6 text-center text-sm text-neutral-500">
-              No sales in the last 30 days.
-            </p>
-          ) : (
-            <div className="flex h-36 items-end gap-1.5">
-              {chart.map(([day, revenue]) => (
-                <div
-                  key={day}
-                  className="group flex flex-1 flex-col items-center gap-1"
-                  title={`${day}: ${peso(revenue)}`}
-                >
+      {/* Daily revenue chart — revenue viewers only */}
+      {canSeeRevenue && (
+        <FadeIn delay={0.2}>
+        <section className="space-y-3">
+          <h2 className="text-lg font-semibold">Daily revenue (last 14 days)</h2>
+          <div className="card-lift soft rounded-[18px] border border-neutral-200 p-5 dark:border-white/5">
+            {chart.length === 0 ? (
+              <p className="py-6 text-center text-sm text-neutral-500">
+                No sales in the last 30 days.
+              </p>
+            ) : (
+              <div className="flex h-36 items-end gap-1.5">
+                {chart.map(([day, revenue]) => (
                   <div
-                    className="w-full bg-foreground/80 transition-colors group-hover:bg-foreground"
-                    style={{ height: `${Math.max((revenue / maxDay) * 100, 2)}%` }}
-                  />
-                  <span className="text-[10px] text-neutral-500">
-                    {day.slice(5)}
-                  </span>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </section>
+                    key={day}
+                    className="group flex flex-1 flex-col items-center gap-1"
+                    title={`${day}: ${peso(revenue)}`}
+                  >
+                    <div
+                      className="w-full bg-foreground/80 transition-colors group-hover:bg-foreground"
+                      style={{ height: `${Math.max((revenue / maxDay) * 100, 2)}%` }}
+                    />
+                    <span className="text-[10px] text-neutral-500">
+                      {day.slice(5)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </section>
+        </FadeIn>
+      )}
 
-      {/* Per-store performance */}
-      <section className="space-y-3">
-        <h2 className="text-lg font-semibold">Store performance (30 days)</h2>
-        <div className="overflow-x-auto rounded-2xl border border-neutral-200 bg-white dark:bg-transparent dark:border-neutral-800 dark:bg-transparent">
-          <table className="w-full text-sm">
-            <thead className="bg-neutral-100 text-left dark:bg-neutral-900">
-              <tr>
-                <th className="px-4 py-2">Store</th>
-                <th className="px-4 py-2 text-right">Revenue</th>
-                <th className="px-4 py-2 text-right">Profit</th>
-                <th className="px-4 py-2 text-right">Margin</th>
-              </tr>
-            </thead>
-            <tbody>
-              {summaries.map((s) => (
-                <tr key={s.id} className="border-t border-neutral-200 dark:border-neutral-800">
-                  <td className="px-4 py-2 font-medium">{s.name}</td>
-                  <td className="px-4 py-2 text-right">{peso(s.revenue)}</td>
-                  <td className="px-4 py-2 text-right">{peso(s.profit)}</td>
-                  <td className="px-4 py-2 text-right">
-                    {s.revenue > 0
-                      ? `${((s.profit / s.revenue) * 100).toFixed(1)}%`
-                      : "—"}
-                  </td>
-                </tr>
-              ))}
-              {summaries.length === 0 && (
+      {/* Per-store performance — revenue viewers only */}
+      {canSeeRevenue && (
+        <section className="space-y-3">
+          <h2 className="text-lg font-semibold">Store performance (30 days)</h2>
+          <div className="overflow-x-auto rounded-2xl border border-neutral-200 bg-white dark:bg-transparent dark:border-neutral-800 dark:bg-transparent">
+            <table className="w-full text-sm">
+              <thead className="bg-neutral-100 text-left dark:bg-neutral-900">
                 <tr>
-                  <td colSpan={4} className="px-4 py-6 text-center text-neutral-500">
-                    No stores yet{isAdmin ? " — add one under Stores." : "."}
-                  </td>
+                  <th className="px-4 py-2">Store</th>
+                  <th className="px-4 py-2 text-right">Revenue</th>
+                  <th className="px-4 py-2 text-right">Profit</th>
+                  <th className="px-4 py-2 text-right">Margin</th>
                 </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </section>
-      </FadeIn>
+              </thead>
+              <tbody>
+                {summaries.map((s) => (
+                  <tr key={s.id} className="border-t border-neutral-200 dark:border-neutral-800">
+                    <td className="px-4 py-2 font-medium">{s.name}</td>
+                    <td className="px-4 py-2 text-right">{peso(s.revenue)}</td>
+                    <td className="px-4 py-2 text-right">{peso(s.profit)}</td>
+                    <td className="px-4 py-2 text-right">
+                      {s.revenue > 0
+                        ? `${((s.profit / s.revenue) * 100).toFixed(1)}%`
+                        : "—"}
+                    </td>
+                  </tr>
+                ))}
+                {summaries.length === 0 && (
+                  <tr>
+                    <td colSpan={4} className="px-4 py-6 text-center text-neutral-500">
+                      No stores yet{isAdmin ? " — add one under Stores." : "."}
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
 
       <FadeIn delay={0.4}>
       <div className="grid gap-8 lg:grid-cols-2">

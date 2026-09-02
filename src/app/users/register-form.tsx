@@ -38,6 +38,10 @@ export default function RegisterForm({
             </option>
           ))}
         </select>
+        <select name="store_role" className={`${inputCls} sm:col-span-2`}>
+          <option value="manager">Inventory manager — can sell & manage stock, no revenue</option>
+          <option value="owner">Store owner — also sees revenue & capital for their store</option>
+        </select>
         <button
           type="submit"
           disabled={pending}

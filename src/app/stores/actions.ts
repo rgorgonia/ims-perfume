@@ -6,9 +6,44 @@ import { createClient } from "@/lib/supabase/server";
 
 export type StoreActionState = { error?: string; success?: string };
 
+const STORE_TYPES = ["physical", "online", "kiosk", "warehouse"] as const;
+
 function parseCategories(formData: FormData): string[] | null {
   const categories = formData.getAll("categories").map(String);
   return categories.length ? categories : null;
+}
+
+function parseStoreType(formData: FormData): string {
+  const t = String(formData.get("store_type") ?? "physical");
+  return (STORE_TYPES as readonly string[]).includes(t) ? t : "physical";
+}
+
+/**
+ * Assign the chosen user as this store's manager/owner.
+ * Any other manager previously bound to the store is unassigned first
+ * (one manager per store). No-op when userId is empty.
+ */
+async function assignManager(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  storeId: string,
+  formData: FormData
+): Promise<string | null> {
+  const userId = String(formData.get("manager_user_id") ?? "");
+  const storeRole = String(formData.get("store_role") ?? "manager") === "owner" ? "owner" : "manager";
+  if (!userId) return null;
+
+  // Unassign anyone else currently bound to this store.
+  await supabase
+    .from("profiles")
+    .update({ store_id: null })
+    .eq("store_id", storeId)
+    .neq("id", userId);
+
+  const { error } = await supabase
+    .from("profiles")
+    .update({ store_id: storeId, role: "store_manager", store_role: storeRole })
+    .eq("id", userId);
+  return error ? error.message : null;
 }
 
 export async function createStoreAction(
@@ -23,14 +58,25 @@ export async function createStoreAction(
   const address = String(formData.get("address") ?? "").trim();
   if (!name) return { error: "Store name is required" };
 
-  const { error } = await supabase.from("stores").insert({
-    name,
-    address: address || null,
-    categories: parseCategories(formData),
-  });
+  const { data: store, error } = await supabase
+    .from("stores")
+    .insert({
+      name,
+      address: address || null,
+      categories: parseCategories(formData),
+      store_type: parseStoreType(formData),
+    })
+    .select("id")
+    .single();
   if (error) return { error: error.message };
 
+  const assignError = await assignManager(supabase, store.id, formData);
+  if (assignError) {
+    return { success: `Store "${name}" created, but manager assignment failed: ${assignError}` };
+  }
+
   revalidatePath("/stores");
+  revalidatePath("/users");
   return { success: `Store "${name}" created` };
 }
 
@@ -55,11 +101,18 @@ export async function updateStoreAction(
       address: address || null,
       is_active: isActive,
       categories: parseCategories(formData),
+      store_type: parseStoreType(formData),
     })
     .eq("id", id);
   if (error) return { error: error.message };
 
+  const assignError = await assignManager(supabase, id, formData);
+  if (assignError) {
+    return { success: `Store "${name}" updated, but manager assignment failed: ${assignError}` };
+  }
+
   revalidatePath("/stores");
+  revalidatePath("/users");
   return { success: `Store "${name}" updated` };
 }
 
