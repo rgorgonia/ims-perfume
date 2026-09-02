@@ -92,7 +92,13 @@ export default function AppShell({
   const items = NAV_ITEMS.filter(
     (i) => (!i.admin || isAdmin) && (!i.platformAdmin || isPlatformAdmin)
   );
-  const moreItems = items.filter((i) => !MOBILE_PRIMARY.some((m) => m.href === i.href));
+  const [query, setQuery] = useState("");
+  const visibleItems = query.trim()
+    ? items.filter((i) => i.label.toLowerCase().includes(query.trim().toLowerCase()))
+    : items;
+  const moreItems = visibleItems.filter(
+    (i) => !MOBILE_PRIMARY.some((m) => m.href === i.href),
+  );
   const initials = email.slice(0, 2).toUpperCase();
 
   return (
@@ -120,12 +126,28 @@ export default function AppShell({
         <div className="shrink-0 px-2">
           <input
             type="search"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Escape") setQuery("");
+              if (e.key === "Enter" && visibleItems.length > 0) {
+                window.location.href = visibleItems[0].href;
+              }
+            }}
             placeholder="Ask or Search..."
-            className="min-h-9 w-full rounded-lg border border-black/[0.08] bg-black/[0.04] px-3 text-[13px] text-neutral-800 placeholder:text-neutral-400 focus:border-neutral-500/60 focus:bg-white focus:outline-none dark:border-white/10 dark:bg-white/[0.06] dark:text-slate-200"
+            aria-label="Search navigation"
+            className="min-h-9 w-full rounded-lg border border-black/[0.08] bg-black/[0.04] px-3 text-[13px] text-neutral-800 placeholder:text-neutral-400 focus:border-neutral-500/60 focus:bg-white focus:outline-none dark:border-white/10 dark:bg-white/[0.06] dark:text-slate-200 dark:placeholder:text-slate-500 dark:focus:border-white/25 dark:focus:bg-white/[0.09] [&::-webkit-search-cancel-button]:hidden"
           />
+          {query.trim() !== "" && (
+            <p className="px-1 pt-1 text-[11px] text-neutral-500 dark:text-slate-500">
+              {visibleItems.length === 0
+                ? "No matches"
+                : `${visibleItems.length} match${visibleItems.length === 1 ? "" : "es"}`}
+            </p>
+          )}
         </div>
         <nav className="flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto pb-2">
-          {items.map((item) => {
+          {visibleItems.map((item) => {
             const active = isActive(pathname, item.href);
             const Icon = item.icon;
             return (
