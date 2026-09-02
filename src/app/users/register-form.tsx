@@ -8,9 +8,11 @@ const inputCls =
 
 export default function RegisterForm({
   stores,
+  tenants,
   isPlatformAdmin,
 }: {
   stores: { id: string; name: string }[];
+  tenants: { id: string; name: string }[];
   isPlatformAdmin: boolean;
 }) {
   const [result, formAction, pending] = useActionState(registerUserAction, {});
@@ -41,6 +43,19 @@ export default function RegisterForm({
             {isPlatformAdmin && <option value="tenant_owner">Tenant Owner</option>}
           </select>
         </div>
+        {isPlatformAdmin && (
+          <div className="space-y-1">
+            <label htmlFor="rf-tenant" className="text-xs font-medium text-neutral-600 dark:text-neutral-400">Tenant</label>
+            <select id="rf-tenant" name="tenant_id" className={inputCls}>
+              <option value="">No tenant (platform-wide)</option>
+              {tenants.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
         <div className="space-y-1">
           <label htmlFor="rf-store" className="text-xs font-medium text-neutral-600 dark:text-neutral-400">Store assignment</label>
           <select id="rf-store" name="store_id" className={inputCls}>

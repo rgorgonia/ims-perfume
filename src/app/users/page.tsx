@@ -30,16 +30,24 @@ export default async function UsersPage({
     .from("profiles")
     .select("id, full_name, role, is_active, tenant_id, store_id, stores(name)")
     .order("created_at", { ascending: true });
-  if (session.tenant_id) profileQuery.eq("tenant_id", session.tenant_id);
+  // Platform admins see every profile (RLS `profiles_platform_all` scopes
+  // visibility); their session tenant is just an operating context, so do not
+  // filter the list by it — profiles with no tenant (e.g. owners they created)
+  // would otherwise disappear.
+  if (session.tenant_id && !session.isPlatformAdmin) {
+    profileQuery.eq("tenant_id", session.tenant_id);
+  }
+
+  const tenantsQuery = session.isPlatformAdmin
+    ? supabase.from("tenants").select("id, name").order("name")
+    : Promise.resolve({ data: [] as { id: string; name: string }[] });
 
   const storeQuery = session.tenant_id
     ? supabase.from("stores").select("id, name").eq("tenant_id", session.tenant_id).order("name")
     : supabase.from("stores").select("id, name").order("name");
 
-  const [{ data: profiles }, { data: stores }] = await Promise.all([
-    profileQuery,
-    storeQuery,
-  ]);
+  const [{ data: profiles }, { data: stores }, { data: tenants }] =
+    await Promise.all([profileQuery, storeQuery, tenantsQuery]);
 
   return (
     <div className="mx-auto max-w-5xl space-y-8 py-6 sm:py-8">
@@ -59,6 +67,7 @@ export default async function UsersPage({
         </p>
         <RegisterForm
           stores={stores ?? []}
+          tenants={tenants ?? []}
           isPlatformAdmin={session.isPlatformAdmin}
         />
       </section>
