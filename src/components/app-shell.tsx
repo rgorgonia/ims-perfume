@@ -16,6 +16,8 @@ import {
   MoreHorizontal,
   X,
   LogOut,
+  Building2,
+  ScrollText,
 } from "lucide-react";
 import { signOutAction } from "@/app/actions";
 
@@ -23,6 +25,7 @@ type Item = {
   href: string;
   label: string;
   admin?: boolean;
+  platformAdmin?: boolean;
   icon: React.ComponentType<{ className?: string }>;
 };
 
@@ -35,6 +38,8 @@ const NAV_ITEMS: Item[] = [
   { href: "/users", label: "Users", admin: true, icon: Users },
   { href: "/capital", label: "Capital", admin: true, icon: Wallet },
   { href: "/settings", label: "Settings", icon: Settings },
+  { href: "/admin/tenants", label: "Tenants", platformAdmin: true, icon: Building2 },
+  { href: "/admin/audit", label: "Audit log", platformAdmin: true, icon: ScrollText },
 ];
 
 // Mobile bottom bar shows the 4 most-used tabs; the rest live in the "More" sheet.
@@ -48,6 +53,7 @@ function isActive(pathname: string, href: string) {
 export default function AppShell({
   email,
   isAdmin,
+  isPlatformAdmin,
   roleLabel,
   tenantName,
   storeName,
@@ -56,6 +62,7 @@ export default function AppShell({
 }: {
   email: string;
   isAdmin: boolean;
+  isPlatformAdmin: boolean;
   roleLabel: string;
   tenantName: string | null;
   storeName: string | null;
@@ -82,7 +89,9 @@ export default function AppShell({
     localStorage.setItem("ims-theme.v2", next ? "dark" : "light");
   }
 
-  const items = NAV_ITEMS.filter((i) => !i.admin || isAdmin);
+  const items = NAV_ITEMS.filter(
+    (i) => (!i.admin || isAdmin) && (!i.platformAdmin || isPlatformAdmin)
+  );
   const moreItems = items.filter((i) => !MOBILE_PRIMARY.some((m) => m.href === i.href));
   const initials = email.slice(0, 2).toUpperCase();
 

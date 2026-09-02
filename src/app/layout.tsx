@@ -88,6 +88,7 @@ export default async function RootLayout({
           <AppShell
             email={session.user.email}
             isAdmin={session.isPlatformAdmin || session.isTenantOwner}
+            isPlatformAdmin={session.isPlatformAdmin}
             roleLabel={roleLabel}
             tenantName={tenantName}
             storeName={storeName}

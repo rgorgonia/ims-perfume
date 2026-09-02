@@ -98,9 +98,9 @@ export default async function SalesPage() {
       .limit(200),
     supabase
       .from("sales_transactions")
-      .select("id, total, payment_method, created_at, stores(name)")
+      .select("id, total, payment_method, created_at, stores(name)", { count: "exact" })
       .order("created_at", { ascending: false })
-      .limit(20),
+      .range(0, 49),
     supabase
       .from("inventory_levels")
       .select("variant_id, store_id, quantity_on_hand"),

@@ -222,8 +222,10 @@ create or replace function public.current_tenant_ids()
 returns setof uuid language sql security definer stable set search_path = public as $$
   select id from public.tenants where public.is_platform_admin()
   union
-  select tenant_id from public.profiles
-  where id = auth.uid() and is_active and tenant_id is not null;
+  select p.tenant_id from public.profiles p
+    join public.tenants t on t.id = p.tenant_id
+  where p.id = auth.uid() and p.is_active and t.is_active
+    and p.tenant_id is not null;
 $$;
 
 -- Stores the caller may touch.
@@ -236,10 +238,14 @@ returns setof uuid language sql security definer stable set search_path = public
   union
   select s.id from public.stores s
     join public.profiles p on p.tenant_id = s.tenant_id
-   where p.id = auth.uid() and p.role = 'tenant_owner' and p.is_active
+    join public.tenants t on t.id = s.tenant_id
+   where p.id = auth.uid() and p.role = 'tenant_owner'
+     and p.is_active and t.is_active
   union
-  select store_id from public.profiles
-  where id = auth.uid() and is_active and role = 'store_manager' and store_id is not null;
+  select p.store_id from public.profiles p
+    join public.tenants t on t.id = p.tenant_id
+  where p.id = auth.uid() and p.is_active and t.is_active
+    and p.role = 'store_manager' and p.store_id is not null;
 $$;
 
 -- Compatibility alias.

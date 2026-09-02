@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import ThemeToggle from "@/components/theme-toggle";
@@ -79,6 +80,14 @@ export default function Login() {
           >
             {loading ? "Signing in…" : "Sign in"}
           </button>
+          <p className="text-center text-sm">
+            <Link
+              href="/login/forgot"
+              className="font-medium text-neutral-500 underline underline-offset-4 hover:text-neutral-900 dark:text-slate-400 dark:hover:text-white"
+            >
+              Forgot password?
+            </Link>
+          </p>
         </form>
       </main>
     </div>
