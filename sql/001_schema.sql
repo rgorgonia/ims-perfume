@@ -186,12 +186,36 @@ $$;
 -- ---------- TRIGGER: inventory_levels derived from stock_movements ----------
 create or replace function public.apply_stock_movement()
 returns trigger language plpgsql security definer set search_path = public as $$
+declare v_qoh int;
 begin
-  insert into public.inventory_levels (variant_id, store_id, batch_id, quantity_on_hand)
-  values (new.variant_id, new.store_id, new.batch_id, new.quantity)
-  on conflict (variant_id, store_id, batch_id)
-  do update set quantity_on_hand = inventory_levels.quantity_on_hand + new.quantity,
-                updated_at = now();
+  -- Null-safe upsert: NULL batch_id (no-lot SKU) must accumulate into the
+  -- SAME inventory_levels row. `on conflict (..., batch_id)` does NOT work
+  -- because Postgres treats NULL as distinct in unique constraints.
+  select quantity_on_hand into v_qoh
+    from public.inventory_levels
+   where variant_id = new.variant_id
+     and store_id  = new.store_id
+     and batch_id  is not distinct from new.batch_id;
+
+  if v_qoh is null then
+    if new.quantity < 0 then
+      raise exception 'cannot deduct stock: no stock on hand for variant % at store %',
+        new.variant_id, new.store_id;
+    end if;
+    insert into public.inventory_levels (variant_id, store_id, batch_id, quantity_on_hand)
+    values (new.variant_id, new.store_id, new.batch_id, new.quantity);
+  else
+    if v_qoh + new.quantity < 0 then
+      raise exception 'insufficient stock for variant % at store %: have %, needed %',
+        new.variant_id, new.store_id, v_qoh, -new.quantity;
+    end if;
+    update public.inventory_levels
+       set quantity_on_hand = quantity_on_hand + new.quantity,
+           updated_at       = now()
+     where variant_id = new.variant_id
+       and store_id  = new.store_id
+       and batch_id  is not distinct from new.batch_id;
+  end if;
   return new;
 end;
 $$;

@@ -20,7 +20,12 @@ type Sale = {
   stores: { name: string } | null;
 };
 
-async function recordSale(formData: FormData) {
+export type SaleResult = { error?: string; success?: string };
+
+async function recordSale(
+  _prev: SaleResult,
+  formData: FormData
+): Promise<SaleResult> {
   "use server";
   const session = await requireUser();
   const supabase = await createClient();
@@ -31,16 +36,34 @@ async function recordSale(formData: FormData) {
   const paymentMethod = String(formData.get("payment_method") ?? "cash");
   const discount = Number(formData.get("discount") ?? 0);
 
-  if (!storeId || !variantId || quantity < 1) return;
+  if (!storeId || !variantId || quantity < 1)
+    return { error: "Store, product and a valid quantity are required." };
 
   const { data: variant } = await supabase
     .from("product_variants")
     .select("retail_price, cost_price")
     .eq("id", variantId)
     .single();
-  if (!variant) return;
+  if (!variant) return { error: "That product was not found." };
+
+  // Enforce available stock for the selected store (RLS-scoped).
+  const { data: availRows } = await supabase
+    .from("inventory_levels")
+    .select("quantity_on_hand")
+    .eq("variant_id", variantId)
+    .eq("store_id", storeId);
+  const available = (availRows ?? []).reduce(
+    (sum, r) => sum + Number(r.quantity_on_hand),
+    0
+  );
+  if (quantity > available)
+    return {
+      error: `Insufficient stock — only ${available} available at this store.`,
+    };
 
   const subtotal = Number(variant.retail_price) * quantity;
+  if (discount < 0 || discount > subtotal)
+    return { error: "Discount cannot be negative or exceed the subtotal." };
   const total = Math.max(subtotal - discount, 0);
 
   const { data: sale, error } = await supabase
@@ -56,7 +79,8 @@ async function recordSale(formData: FormData) {
     })
     .select("id")
     .single();
-  if (error || !sale) return;
+  if (error || !sale)
+    return { error: error?.message ?? "Could not record the sale." };
 
   const { error: itemError } = await supabase.from("sale_items").insert({
     sale_id: sale.id,
@@ -68,10 +92,14 @@ async function recordSale(formData: FormData) {
   if (itemError) {
     // Don't leave an empty transaction behind
     await supabase.from("sales_transactions").delete().eq("id", sale.id);
-    return;
+    return { error: itemError.message };
   }
 
   revalidatePath("/sales");
+  revalidatePath("/");
+  revalidatePath("/inventory");
+  revalidatePath("/products");
+  return { success: "Sale recorded — stock updated." };
 }
 
 
@@ -80,20 +108,40 @@ export default async function SalesPage() {
   const session = await requireUser();
   const supabase = await createClient();
 
-  const [{ data: stores }, { data: variants }, { data: sales }] =
-    await Promise.all([
-      supabase.from("stores").select("id, name, categories").order("name"),
-      supabase
-        .from("variant_public_view")
-        .select("id, sku, size_ml, retail_price, products(name, category)")
-        .order("sku")
-        .limit(200),
-      supabase
-        .from("sales_transactions")
-        .select("id, total, payment_method, created_at, stores(name)")
-        .order("created_at", { ascending: false })
-        .limit(20),
-    ]);
+  const [
+    { data: stores },
+    { data: variants },
+    { data: sales },
+    { data: inventory },
+  ] = await Promise.all([
+    supabase.from("stores").select("id, name, categories").order("name"),
+    supabase
+      .from("variant_public_view")
+      .select("id, sku, size_ml, retail_price, products(name, category)")
+      .order("sku")
+      .limit(200),
+    supabase
+      .from("sales_transactions")
+      .select("id, total, payment_method, created_at, stores(name)")
+      .order("created_at", { ascending: false })
+      .limit(20),
+    supabase
+      .from("inventory_levels")
+      .select("variant_id, store_id, quantity_on_hand"),
+  ]);
+
+  // availability[variantId][storeId] = units on hand (RLS-scoped).
+  const availability: Record<string, Record<string, number>> = {};
+  for (const row of (inventory ?? []) as {
+    variant_id: string;
+    store_id: string;
+    quantity_on_hand: number;
+  }[]) {
+    availability[row.variant_id] ??= {};
+    availability[row.variant_id][row.store_id] =
+      (availability[row.variant_id][row.store_id] ?? 0) +
+      Number(row.quantity_on_hand);
+  }
 
   return (
     <div className="mx-auto max-w-5xl space-y-8 py-6 sm:py-8">
@@ -107,6 +155,7 @@ export default async function SalesPage() {
           action={recordSale}
           stores={(stores ?? []) as unknown as Store[]}
           variants={(variants ?? []) as unknown as Variant[]}
+          availability={availability}
           sizeUnit={sizeUnit}
           currencySymbol={currencySymbol}
         />

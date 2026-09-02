@@ -8,6 +8,7 @@ import { parseVariantAttributes } from "@/lib/attributes";
 import CategoryAttributeFields from "@/components/category-attribute-fields";
 
 type Variant = {
+  id: string;
   sku: string;
   size_ml: number;
   retail_price: number;
@@ -76,14 +77,43 @@ export default async function ProductsPage() {
   const session = await requireUser();
   const isAdmin = session.profile?.role === "system_admin";
   const supabase = await createClient();
-  const [{ currencySymbol, currencyLocale, sizeUnit }, taxonomy, { data: products }] =
-    await Promise.all([getSettings(), getTaxonomy(), supabase
+  const [
+    { currencySymbol, currencyLocale, sizeUnit },
+    taxonomy,
+    { data: products },
+    { data: inventory },
+  ] = await Promise.all([
+    getSettings(),
+    getTaxonomy(),
+    supabase
       .from("products")
       .select(
-        "id, name, brand, concentration, category, retail_price, is_active, product_variants(sku, size_ml, retail_price)"
+        "id, name, brand, concentration, category, retail_price, is_active, product_variants(id, sku, size_ml, retail_price)"
       )
-      .order("name")]);
+      .order("name"),
+    // RLS-scoped: admins see all stores, managers only their own.
+    supabase.from("inventory_levels").select("variant_id, quantity_on_hand"),
+  ]);
   const money = (n: number) => formatMoney(n, currencySymbol, currencyLocale);
+
+  // Sum total units on hand per variant (across the caller's visible stores).
+  const availByVariant = new Map<string, number>();
+  for (const row of (inventory ?? []) as {
+    variant_id: string;
+    quantity_on_hand: number;
+  }[]) {
+    availByVariant.set(
+      row.variant_id,
+      (availByVariant.get(row.variant_id) ?? 0) + Number(row.quantity_on_hand)
+    );
+  }
+
+  // Total available across all of a product's variants.
+  const totalAvail = (p: Product) =>
+    (p.product_variants ?? []).reduce(
+      (sum, v) => sum + (availByVariant.get(v.id) ?? 0),
+      0
+    );
 
   const inputCls =
     "rounded-[10px] border border-black/10 px-3 py-2 text-sm dark:border-neutral-700 dark:bg-transparent";
@@ -156,6 +186,7 @@ export default async function ProductsPage() {
                   <th className="px-4 py-2">Category</th>
                   <th className="px-4 py-2">Concentration</th>
                   <th className="px-4 py-2">Variants</th>
+                  <th className="px-4 py-2">Available</th>
                   <th className="px-4 py-2">Retail</th>
                 </tr>
               </thead>
@@ -176,8 +207,26 @@ export default async function ProductsPage() {
                     <td className="px-4 py-2">{p.concentration ?? "—"}</td>
                     <td className="px-4 py-2">
                       {(p.product_variants ?? [])
-                        .map((v) => `${v.sku} (${v.size_ml}${sizeUnit})`)
+                        .map(
+                          (v) =>
+                            `${v.sku} (${v.size_ml}${sizeUnit}) · ${
+                              availByVariant.get(v.id) ?? 0
+                            } left`
+                        )
                         .join(", ") || "—"}
+                    </td>
+                    <td className="px-4 py-2">
+                      <span
+                        className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+                          totalAvail(p) <= 0
+                            ? "bg-red-100 text-red-700 dark:bg-red-950/50 dark:text-red-300"
+                            : totalAvail(p) <= 5
+                              ? "bg-amber-100 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300"
+                              : "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300"
+                        }`}
+                      >
+                        {totalAvail(p)}
+                      </span>
                     </td>
                     <td className="px-4 py-2">{money(Number(p.retail_price))}</td>
                   </tr>

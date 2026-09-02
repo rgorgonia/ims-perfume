@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useActionState, useState } from "react";
+import type { SaleResult } from "./page";
 
 type StoreT = { id: string; name: string; categories: string[] | null };
 type VariantT = {
@@ -15,40 +16,71 @@ const inputCls =
   "rounded-[10px] border border-black/10 px-3 py-2 text-sm dark:border-neutral-700 dark:bg-transparent";
 
 /** Sale form where the variant dropdown only shows products in the
- *  selected store's configured categories (null = all categories). */
+ *  selected store's configured categories (null = all categories), the
+ *  per-store available stock is listed, and out-of-stock variants are
+ *  disabled so sales never silently fail. */
 export default function SaleForm({
   action,
   stores,
   variants,
+  availability,
   sizeUnit,
   currencySymbol,
 }: {
-  action: (formData: FormData) => void;
+  action: (prev: SaleResult, formData: FormData) => Promise<SaleResult>;
   stores: StoreT[];
   variants: VariantT[];
+  availability: Record<string, Record<string, number>>;
   sizeUnit: string;
   currencySymbol: string;
 }) {
+  const [res, submit, pending] = useActionState(action, {} as SaleResult);
   const [storeId, setStoreId] = useState(stores[0]?.id ?? "");
   const [variantId, setVariantId] = useState("");
+  const [qty, setQty] = useState(1);
 
   const store = stores.find((s) => s.id === storeId);
   const allowed =
     !store?.categories || store.categories.length === 0
       ? null
       : store.categories;
-  const filtered = allowed
+  let filtered = allowed
     ? variants.filter((v) => {
         const cat = v.products?.category;
         return cat ? allowed.includes(cat) : false;
       })
     : variants;
 
+  const availFor = (v: VariantT) => availability[v.id]?.[storeId] ?? 0;
+
+  // In-stock variants first so low/empty stock sinks to the bottom.
+  filtered = [...filtered].sort((a, b) => availFor(b) - availFor(a));
+
+  const selected = variants.find((v) => v.id === variantId);
+  const maxQty = selected ? Math.max(availFor(selected), 0) : 0;
+  const noVariantAvailable = selected ? maxQty < 1 : false;
+
   return (
     <form
-      action={action}
+      action={submit}
       className="grid gap-3 rounded-2xl border border-neutral-200 bg-white dark:bg-transparent p-4 sm:grid-cols-2 dark:border-neutral-800"
     >
+      {res?.error && (
+        <p
+          role="alert"
+          className="rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700 sm:col-span-2 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-300"
+        >
+          {res.error}
+        </p>
+      )}
+      {res?.success && (
+        <p
+          role="status"
+          className="rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-2 text-sm text-emerald-700 sm:col-span-2 dark:border-emerald-900/50 dark:bg-emerald-950/40 dark:text-emerald-300"
+        >
+          {res.success}
+        </p>
+      )}
       <select
         name="store_id"
         required
@@ -74,19 +106,25 @@ export default function SaleForm({
         onChange={(e) => setVariantId(e.target.value)}
       >
         <option value="">Select product variant *</option>
-        {filtered.map((v) => (
-          <option key={v.id} value={v.id}>
-            {v.products?.name} — {v.sku} ({v.size_ml}
-            {sizeUnit}) — {currencySymbol}
-            {Number(v.retail_price).toFixed(2)}
-          </option>
-        ))}
+        {filtered.map((v) => {
+          const a = availFor(v);
+          return (
+            <option key={v.id} value={v.id} disabled={a < 1}>
+              {v.products?.name} — {v.sku} ({v.size_ml}
+              {sizeUnit}) — {currencySymbol}
+              {Number(v.retail_price).toFixed(2)} · {a} available
+            </option>
+          );
+        })}
       </select>
       <input
         name="quantity"
         type="number"
         min="1"
+        max={maxQty || undefined}
         required
+        value={qty}
+        onChange={(e) => setQty(Number(e.target.value))}
         placeholder="Quantity *"
         className={inputCls}
       />
@@ -106,9 +144,10 @@ export default function SaleForm({
       />
       <button
         type="submit"
-        className="rounded-2xl btn-neon px-4 py-2 text-sm font-medium transition-opacity hover:opacity-80 sm:col-span-2"
+        disabled={pending || noVariantAvailable}
+        className="rounded-2xl btn-neon px-4 py-2 text-sm font-medium transition-opacity hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-50 sm:col-span-2"
       >
-        Record sale
+        {pending ? "Recording…" : "Record sale"}
       </button>
     </form>
   );
