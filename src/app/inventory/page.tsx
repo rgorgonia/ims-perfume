@@ -21,7 +21,7 @@ type Level = {
 async function recordMovement(formData: FormData) {
   "use server";
   const session = await requireUser();
-  const isAdmin = session.profile?.role === "system_admin";
+  const isPrivileged = session.isPlatformAdmin || session.isTenantOwner;
   const supabase = await createClient();
 
   const storeId = String(formData.get("store_id") ?? "");
@@ -41,15 +41,15 @@ async function recordMovement(formData: FormData) {
         ? rawQty
         : Math.abs(rawQty);
 
-  // Optional batch/lot (admin-only — RLS blocks manager batch writes)
+  // Optional batch/lot (privileged only — managers can't write to batches).
   let batchId: string | null = null;
-  if (isAdmin && lotNumber) {
+  if (isPrivileged && lotNumber) {
     const { data: existing } = await supabase
       .from("batches")
       .select("id")
       .eq("product_variant_id", variantId)
       .eq("lot_number", lotNumber)
-      .single();
+      .maybeSingle();
     if (existing) {
       batchId = existing.id;
     } else {
@@ -59,6 +59,7 @@ async function recordMovement(formData: FormData) {
           product_variant_id: variantId,
           lot_number: lotNumber,
           expires_on: expiresOn || null,
+          tenant_id: session.tenant_id,
         })
         .select("id")
         .single();
@@ -69,6 +70,7 @@ async function recordMovement(formData: FormData) {
   const { error } = await supabase.from("stock_movements").insert({
     variant_id: variantId,
     store_id: storeId,
+    tenant_id: session.tenant_id,
     batch_id: batchId,
     movement_type: movementType,
     quantity,
@@ -82,8 +84,8 @@ async function recordMovement(formData: FormData) {
 
 export default async function InventoryPage() {
   const session = await requireUser();
-  const isAdmin = session.profile?.role === "system_admin";
-  const { sizeUnit } = await getSettings();
+  const isPrivileged = session.isPlatformAdmin || session.isTenantOwner;
+  const { sizeUnit } = await getSettings(session.tenant_id);
   const supabase = await createClient();
 
   const [{ data: stores }, { data: variants }, { data: levels }] =
@@ -157,7 +159,7 @@ export default async function InventoryPage() {
             placeholder="Quantity *"
             className={inputCls}
           />
-          {isAdmin && (
+          {isPrivileged && (
             <>
               <input
                 name="lot_number"

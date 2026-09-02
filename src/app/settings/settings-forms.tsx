@@ -80,7 +80,7 @@ export default function SettingsForms({
           <div className="flex items-baseline justify-between gap-4">
             <dt className="shrink-0 text-neutral-500 dark:text-slate-400">Role</dt>
             <dd className="min-w-0 truncate font-medium">
-              {role === "system_admin" ? "System Admin" : "Store Manager"}
+              {role === "platform_admin" ? "Platform Admin" : role === "tenant_owner" ? "Owner" : "Store Manager"}
             </dd>
           </div>
         </dl>

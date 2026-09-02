@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { getSession } from "@/lib/auth";
 import { getSettings } from "@/lib/settings";
+import { createClient } from "@/lib/supabase/server";
 import AppShell from "@/components/app-shell";
 
 const geistSans = Geist({
@@ -45,7 +46,35 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const session = await getSession();
-  const settings = await getSettings();
+  const supabase = await createClient();
+
+  let tenantName: string | null = null;
+  let storeName: string | null = null;
+  if (session?.tenant_id) {
+    const t = await supabase
+      .from("tenants")
+      .select("name")
+      .eq("id", session.tenant_id)
+      .maybeSingle();
+    tenantName = (t.data as { name: string } | null)?.name ?? null;
+  }
+  if (session?.profile?.store_id) {
+    const s = await supabase
+      .from("stores")
+      .select("name")
+      .eq("id", session.profile.store_id)
+      .maybeSingle();
+    storeName = (s.data as { name: string } | null)?.name ?? null;
+  }
+
+  const settings = await getSettings(session?.tenant_id ?? null);
+
+  const roleLabel =
+    session?.profile?.role === "platform_admin"
+      ? "Platform Admin"
+      : session?.profile?.role === "tenant_owner"
+        ? "Owner"
+        : "Store Manager";
 
   return (
     <html lang="en" suppressHydrationWarning>
@@ -58,7 +87,10 @@ export default async function RootLayout({
         {session ? (
           <AppShell
             email={session.user.email}
-            isAdmin={session.profile?.role === "system_admin"}
+            isAdmin={session.isPlatformAdmin || session.isTenantOwner}
+            roleLabel={roleLabel}
+            tenantName={tenantName}
+            storeName={storeName}
             businessName={settings.businessName}
           >
             {children}

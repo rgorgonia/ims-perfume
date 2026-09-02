@@ -23,10 +23,10 @@ type Sale = {
 export default async function Dashboard() {
   const session = await requireUser();
   const supabase = await createClient();
-  const isAdmin = session.profile?.role === "system_admin";
-  // Inventory managers don't see revenue; store owners (of their store) and admins do.
-  const canSeeRevenue = isAdmin || session.profile?.store_role === "owner";
-  const { currencySymbol, currencyLocale } = await getSettings();
+  const isPrivileged = session.isPlatformAdmin || session.isTenantOwner;
+  // Store managers don't see revenue/profit/capital; owners & platform admins do.
+  const canSeeRevenue = isPrivileged;
+  const { currencySymbol, currencyLocale } = await getSettings(session.tenant_id);
   const peso = (n: number) => formatMoney(n, currencySymbol, currencyLocale);
 
   const since30d = new Date(Date.now() - 30 * 24 * 3600 * 1000).toISOString();
@@ -45,7 +45,7 @@ export default async function Dashboard() {
       .select("id, total, created_at, stores(name)")
       .order("created_at", { ascending: false })
       .limit(8),
-    isAdmin
+    isPrivileged
       ? supabase.from("capital_ledger").select("amount")
       : Promise.resolve({ data: null } as { data: { amount: number }[] | null }),
     canSeeRevenue
@@ -122,7 +122,7 @@ export default async function Dashboard() {
             Welcome back, {session.profile?.full_name ?? "there"}
           </h1>
           <p className="text-sm text-neutral-600 dark:text-neutral-400">
-            {isAdmin ? "Business overview — last 30 days" : "Your store — last 30 days"}
+            {isPrivileged ? "Business overview — last 30 days" : "Your store — last 30 days"}
           </p>
         </div>
       </header>
@@ -151,7 +151,7 @@ export default async function Dashboard() {
           <p className="text-xs text-neutral-500">Low-stock items</p>
           <p className="text-xl font-bold">{lowStock.length}</p>
         </div>
-        {isAdmin ? (
+        {isPrivileged ? (
           <div className={statCls}>
             <p className="text-xs text-neutral-500">Capital position</p>
             <p className="text-xl font-bold">
@@ -231,7 +231,7 @@ export default async function Dashboard() {
                 {summaries.length === 0 && (
                   <tr>
                     <td colSpan={4} className="px-4 py-6 text-center text-neutral-500">
-                      No stores yet{isAdmin ? " — add one under Stores." : "."}
+                      No stores yet{isPrivileged ? " — add one under Stores." : "."}
                     </td>
                   </tr>
                 )}

@@ -1,18 +1,17 @@
 import { revalidatePath } from "next/cache";
-import { requireAdmin } from "@/lib/auth";
+import { requirePrivileged } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import RegisterForm from "./register-form";
 import ResetPasswordButton from "./reset-button";
 import ReassignControl from "./reassign-control";
 import { resetUserPasswordAction } from "./actions";
 
-type Store = { id: string; name: string };
 type ProfileRow = {
   id: string;
   full_name: string;
   role: string;
-  store_role: string;
   is_active: boolean;
+  tenant_id: string | null;
   store_id: string | null;
   stores: { name: string } | null;
 };
@@ -23,16 +22,23 @@ export default async function UsersPage({
 }: {
   searchParams: Promise<{ reset?: string }>;
 }) {
-  await requireAdmin();
+  const session = await requirePrivileged();
   const supabase = await createClient();
   const { reset } = await searchParams;
 
+  const profileQuery = supabase
+    .from("profiles")
+    .select("id, full_name, role, is_active, tenant_id, store_id, stores(name)")
+    .order("created_at", { ascending: true });
+  if (session.tenant_id) profileQuery.eq("tenant_id", session.tenant_id);
+
+  const storeQuery = session.tenant_id
+    ? supabase.from("stores").select("id, name").eq("tenant_id", session.tenant_id).order("name")
+    : supabase.from("stores").select("id, name").order("name");
+
   const [{ data: profiles }, { data: stores }] = await Promise.all([
-    supabase
-      .from("profiles")
-      .select("id, full_name, role, store_role, is_active, store_id, stores(name)")
-      .order("created_at", { ascending: true }),
-    supabase.from("stores").select("id, name").order("name"),
+    profileQuery,
+    storeQuery,
   ]);
 
   return (
@@ -51,7 +57,10 @@ export default async function UsersPage({
           creation. Share it privately with the new user — they log in with it
           and change it on their Settings page.
         </p>
-        <RegisterForm stores={stores ?? []} />
+        <RegisterForm
+          stores={stores ?? []}
+          isPlatformAdmin={session.isPlatformAdmin}
+        />
       </section>
 
       <section className="space-y-3">
@@ -71,24 +80,20 @@ export default async function UsersPage({
               {((profiles ?? []) as unknown as ProfileRow[]).map((p) => (
                 <tr key={p.id} className="border-t border-neutral-200 dark:border-neutral-800">
                   <td className="px-4 py-2 font-medium">{p.full_name}</td>
-                  <td className="px-4 py-2 capitalize">
-                    {p.role.replace("_", " ")}
-                    {p.role === "store_manager" && p.store_role === "owner" && (
-                      <span className="ml-1 text-xs text-neutral-500">(owner)</span>
-                    )}
-                  </td>
+                  <td className="px-4 py-2">{roleLabel(p.role)}</td>
                   <td className="px-4 py-2">{p.stores?.name ?? "—"}</td>
                   <td className="px-4 py-2">
                     {p.is_active ? "Active" : "Disabled"}
                   </td>
                   <td className="px-4 py-2 text-right">
                     <div className="flex items-center justify-end gap-3">
-                      <ReassignControl
-                        userId={p.id}
-                        stores={stores ?? []}
-                        currentStoreId={p.store_id}
-                        currentRole={p.store_role}
-                      />
+                      {p.role === "store_manager" && (
+                        <ReassignControl
+                          userId={p.id}
+                          stores={stores ?? []}
+                          currentStoreId={p.store_id}
+                        />
+                      )}
                       <ResetPasswordButton
                         action={resetUserPasswordAction}
                         userId={p.id}
@@ -124,21 +129,30 @@ export default async function UsersPage({
 
 async function toggleActive(formData: FormData) {
   "use server";
-  const session = await requireAdmin();
+  const session = await requirePrivileged();
   const userId = String(formData.get("user_id") ?? "");
   if (!userId || userId === session.user.id) return;
 
   const supabase = await createClient();
   const { data: current } = await supabase
     .from("profiles")
-    .select("is_active")
+    .select("is_active, role, tenant_id")
     .eq("id", userId)
     .single();
   if (!current) return;
+  // Never let a caller disable a platform admin or a user outside their tenant.
+  if (current.role === "platform_admin") return;
+  if (session.tenant_id && current.tenant_id !== session.tenant_id) return;
 
   await supabase
     .from("profiles")
     .update({ is_active: !current.is_active })
     .eq("id", userId);
   revalidatePath("/users");
+}
+
+function roleLabel(role: string): string {
+  if (role === "platform_admin") return "Platform Admin";
+  if (role === "tenant_owner") return "Owner";
+  return "Store Manager";
 }

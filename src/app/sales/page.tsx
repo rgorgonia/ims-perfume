@@ -39,60 +39,36 @@ async function recordSale(
   if (!storeId || !variantId || quantity < 1)
     return { error: "Store, product and a valid quantity are required." };
 
-  const { data: variant } = await supabase
-    .from("product_variants")
-    .select("retail_price, cost_price")
-    .eq("id", variantId)
-    .single();
-  if (!variant) return { error: "That product was not found." };
-
-  // Enforce available stock for the selected store (RLS-scoped).
-  const { data: availRows } = await supabase
-    .from("inventory_levels")
-    .select("quantity_on_hand")
-    .eq("variant_id", variantId)
-    .eq("store_id", storeId);
-  const available = (availRows ?? []).reduce(
-    (sum, r) => sum + Number(r.quantity_on_hand),
-    0
-  );
-  if (quantity > available)
-    return {
-      error: `Insufficient stock — only ${available} available at this store.`,
-    };
-
-  const subtotal = Number(variant.retail_price) * quantity;
-  if (discount < 0 || discount > subtotal)
-    return { error: "Discount cannot be negative or exceed the subtotal." };
-  const total = Math.max(subtotal - discount, 0);
-
-  const { data: sale, error } = await supabase
-    .from("sales_transactions")
-    .insert({
-      store_id: storeId,
-      sold_by: session.user.id,
-      payment_method: paymentMethod,
-      subtotal,
-      discount,
-      total,
-      total_cogs: Number(variant.cost_price) * quantity,
-    })
-    .select("id")
-    .single();
-  if (error || !sale)
-    return { error: error?.message ?? "Could not record the sale." };
-
-  const { error: itemError } = await supabase.from("sale_items").insert({
-    sale_id: sale.id,
-    variant_id: variantId,
-    quantity,
-    unit_price: variant.retail_price,
-    unit_cogs: variant.cost_price,
+  // Atomic, SECURITY DEFINER RPC: derives the retail price server-side,
+  // validates the store belongs to the caller's tenant, creates the
+  // transaction + line item, fills COGS via trigger and deducts stock via
+  // trigger — all in one transaction. Oversells roll back cleanly with an
+  // "Insufficient stock" error and never leave an orphan transaction.
+  const { data, error } = await supabase.rpc("record_sale", {
+    p_store: storeId,
+    p_variant: variantId,
+    p_quantity: quantity,
+    p_unit_price: 0, // ignored — price is derived in the database
+    p_payment: paymentMethod,
+    p_discount: discount,
   });
-  if (itemError) {
-    // Don't leave an empty transaction behind
-    await supabase.from("sales_transactions").delete().eq("id", sale.id);
-    return { error: itemError.message };
+  if (error) {
+    const msg = error.message ?? "";
+    const m = msg.match(/insufficient stock.*have (\d+), needed (\d+)/i) ||
+      msg.match(/no stock on hand/i);
+    if (m)
+      return {
+        error: m[1]
+          ? `Insufficient stock — only ${m[1]} available at this store.`
+          : "Insufficient stock — this variant has no stock at this store.",
+      };
+    if (/unauthorized store/i.test(msg))
+      return { error: "You don't have access to that store." };
+    if (/unknown or inactive variant/i.test(msg))
+      return { error: "That product is not available." };
+    if (/discount/i.test(msg))
+      return { error: "Discount cannot be negative or exceed the subtotal." };
+    return { error: msg || "Could not record the sale." };
   }
 
   revalidatePath("/sales");
@@ -104,8 +80,8 @@ async function recordSale(
 
 
 export default async function SalesPage() {
-  const { currencySymbol, sizeUnit } = await getSettings();
   const session = await requireUser();
+  const { currencySymbol, sizeUnit } = await getSettings(session.tenant_id);
   const supabase = await createClient();
 
   const [

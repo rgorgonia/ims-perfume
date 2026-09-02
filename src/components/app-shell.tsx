@@ -31,8 +31,8 @@ const NAV_ITEMS: Item[] = [
   { href: "/sales", label: "Sales", icon: ShoppingCart },
   { href: "/inventory", label: "Inventory", icon: Boxes },
   { href: "/products", label: "Products", icon: Package },
-  { href: "/stores", label: "Stores", icon: Store },
-  { href: "/users", label: "Users", icon: Users },
+  { href: "/stores", label: "Stores & Config", admin: true, icon: Store },
+  { href: "/users", label: "Users", admin: true, icon: Users },
   { href: "/capital", label: "Capital", admin: true, icon: Wallet },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
@@ -48,11 +48,17 @@ function isActive(pathname: string, href: string) {
 export default function AppShell({
   email,
   isAdmin,
+  roleLabel,
+  tenantName,
+  storeName,
   businessName,
   children,
 }: {
   email: string;
   isAdmin: boolean;
+  roleLabel: string;
+  tenantName: string | null;
+  storeName: string | null;
   businessName: string;
   children: React.ReactNode;
 }) {
@@ -90,6 +96,16 @@ export default function AppShell({
           </span>
           <span className="min-w-0 flex-1 truncate text-[17px] font-semibold tracking-tight text-neutral-900 dark:text-white" title={businessName}>
             {businessName}
+          </span>
+        </div>
+        <div className="space-y-1 px-2">
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-black/[0.08] bg-black/[0.03] px-2.5 py-1 text-[11px] font-medium text-neutral-600 dark:border-white/10 dark:bg-white/[0.06] dark:text-slate-300">
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+            {tenantName ?? "Platform"}
+            {storeName ? ` · ${storeName}` : ""}
+          </span>
+          <span className="block text-[11px] font-medium capitalize text-neutral-400 dark:text-slate-500">
+            {roleLabel}
           </span>
         </div>
         <div className="px-2">

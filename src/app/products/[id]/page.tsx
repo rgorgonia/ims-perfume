@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { revalidatePath } from "next/cache";
 import { notFound } from "next/navigation";
-import { requireUser } from "@/lib/auth";
+import { requireUser, requirePrivileged } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { getSettings, formatMoney } from "@/lib/settings";
 import { getTaxonomy } from "@/lib/services/taxonomy";
@@ -27,7 +27,7 @@ type Batch = {
 
 async function addVariant(formData: FormData) {
   "use server";
-  await requireUser();
+  const session = await requirePrivileged();
   const productId = String(formData.get("product_id") ?? "");
   const sku = String(formData.get("sku") ?? "").trim();
   const sizeMl = Number(formData.get("size_ml") ?? 0);
@@ -43,8 +43,7 @@ async function addVariant(formData: FormData) {
     .eq("id", productId)
     .single();
 
-  // Dynamic attributes from the taxonomy-generated fields (JSONB on the variant).
-  const taxonomy = await getTaxonomy();
+  const taxonomy = await getTaxonomy(session.tenant_id);
   const attributes = parseVariantAttributes(
     formData,
     taxonomy,
@@ -53,6 +52,7 @@ async function addVariant(formData: FormData) {
 
   const { error } = await supabase.from("product_variants").insert({
     product_id: productId,
+    tenant_id: session.tenant_id,
     sku,
     size_ml: sizeMl,
     variant_type: variantType,
@@ -65,7 +65,7 @@ async function addVariant(formData: FormData) {
 
 async function addNote(formData: FormData) {
   "use server";
-  await requireUser();
+  const session = await requirePrivileged();
   const productId = String(formData.get("product_id") ?? "");
   const noteType = String(formData.get("note_type") ?? "top");
   const noteName = String(formData.get("note_name") ?? "").trim().toLowerCase();
@@ -74,6 +74,7 @@ async function addNote(formData: FormData) {
   const supabase = await createClient();
   await supabase.from("product_notes").upsert({
     product_id: productId,
+    tenant_id: session.tenant_id,
     note_type: noteType,
     note_name: noteName,
   });
@@ -82,7 +83,7 @@ async function addNote(formData: FormData) {
 
 async function removeNote(formData: FormData) {
   "use server";
-  await requireUser();
+  await requirePrivileged();
   const productId = String(formData.get("product_id") ?? "");
   const noteId = String(formData.get("note_id") ?? "");
   const supabase = await createClient();
@@ -92,7 +93,7 @@ async function removeNote(formData: FormData) {
 
 async function addBatch(formData: FormData) {
   "use server";
-  await requireUser();
+  const session = await requirePrivileged();
   const productId = String(formData.get("product_id") ?? "");
   const variantId = String(formData.get("variant_id") ?? "");
   const lotNumber = String(formData.get("lot_number") ?? "").trim();
@@ -103,6 +104,7 @@ async function addBatch(formData: FormData) {
   await supabase.from("batches").upsert(
     {
       product_variant_id: variantId,
+      tenant_id: session.tenant_id,
       lot_number: lotNumber,
       expires_on: expiresOn || null,
     },
@@ -117,12 +119,12 @@ export default async function ProductPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  await requireUser();
+  const session = await requireUser();
   const supabase = await createClient();
   const [{ currencySymbol, currencyLocale, sizeUnit }, taxonomy, { data: product }, { data: variants }] =
     await Promise.all([
-      getSettings(),
-      getTaxonomy(),
+      getSettings(session.tenant_id),
+      getTaxonomy(session.tenant_id),
       supabase.from("products").select("*").eq("id", id).single(),
       supabase.from("variant_public_view").select("*").eq("product_id", id),
     ]);

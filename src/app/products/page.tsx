@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { revalidatePath } from "next/cache";
-import { requireUser } from "@/lib/auth";
+import { requireUser, requirePrivileged } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { getSettings, formatMoney } from "@/lib/settings";
 import { getTaxonomy } from "@/lib/services/taxonomy";
@@ -40,14 +40,14 @@ async function createProduct(
   const retailPrice = Number(formData.get("retail_price") ?? 0);
   const sizeMl = Number(formData.get("size_ml") ?? 0);
   const sku = String(formData.get("sku") ?? "").trim();
-  const isAdmin = session.profile?.role === "system_admin";
-  const costPrice = isAdmin ? Number(formData.get("cost_price") ?? 0) : 0;
+  const isPrivileged = session.isPlatformAdmin || session.isTenantOwner;
+  const costPrice = isPrivileged ? Number(formData.get("cost_price") ?? 0) : 0;
 
   if (!name || !sku || !sizeMl)
     return { error: "Product name, SKU and size are required." };
 
   // Dynamic attributes from the taxonomy-generated fields (JSONB on the variant).
-  const taxonomy = await getTaxonomy();
+  const taxonomy = await getTaxonomy(session.tenant_id);
   const attributes = parseVariantAttributes(formData, taxonomy, category);
 
   const { data: product, error } = await supabase
@@ -56,6 +56,7 @@ async function createProduct(
       name,
       brand: brand || null,
       category: category || null,
+      tenant_id: session.tenant_id,
       // Dual-write legacy column while the transition is in progress
       ...(typeof attributes.concentration === "string"
         ? { concentration: attributes.concentration }
@@ -70,6 +71,7 @@ async function createProduct(
 
   const { error: varError } = await supabase.from("product_variants").insert({
     product_id: product.id,
+    tenant_id: session.tenant_id,
     sku,
     size_ml: sizeMl,
     cost_price: costPrice,
@@ -90,8 +92,8 @@ async function createProduct(
 }
 
 export default async function ProductsPage() {
-  const session = await requireUser();
-  const isAdmin = session.profile?.role === "system_admin";
+  const session = await requirePrivileged();
+  const isPrivileged = session.isPlatformAdmin || session.isTenantOwner;
   const supabase = await createClient();
   const [
     { currencySymbol, currencyLocale, sizeUnit },
@@ -99,8 +101,8 @@ export default async function ProductsPage() {
     { data: products },
     { data: inventory },
   ] = await Promise.all([
-    getSettings(),
-    getTaxonomy(),
+    getSettings(session.tenant_id),
+    getTaxonomy(session.tenant_id),
     supabase
       .from("products")
       .select(
@@ -139,7 +141,7 @@ export default async function ProductsPage() {
           action={createProduct}
           taxonomy={taxonomy}
           sizeUnit={sizeUnit}
-          isAdmin={isAdmin}
+          isAdmin={isPrivileged}
         />
       </section>
 

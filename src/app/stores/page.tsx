@@ -1,4 +1,4 @@
-import { requireAdmin } from "@/lib/auth";
+import { requirePrivileged } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { getTaxonomy } from "@/lib/services/taxonomy";
 import { getSettings } from "@/lib/settings";
@@ -21,7 +21,6 @@ type UserRow = {
   id: string;
   full_name: string;
   role: string;
-  store_role: string;
   store_id: string | null;
 };
 
@@ -30,26 +29,31 @@ export default async function StoresPage({
 }: {
   searchParams: Promise<{ tab?: string }>;
 }) {
-  await requireAdmin();
+  const session = await requirePrivileged();
   const supabase = await createClient();
-  const [{ tab }, taxonomy, s] = await Promise.all([
+  const [{ tab }, taxonomy, settings] = await Promise.all([
     searchParams,
-    getTaxonomy(),
-    getSettings(),
+    getTaxonomy(session.tenant_id),
+    getSettings(session.tenant_id),
   ]);
   const cats = taxonomy.categories.map((c) => ({ slug: c.slug, label: c.label }));
 
   const [{ data: stores }, { data: users }] = await Promise.all([
-    supabase
-      .from("stores")
-      .select("id, name, address, is_active, categories, store_type")
-      .order("name"),
+    session.tenant_id
+      ? supabase
+          .from("stores")
+          .select("id, name, address, is_active, categories, store_type")
+          .eq("tenant_id", session.tenant_id)
+          .order("name")
+      : Promise.resolve({ data: [] as unknown[] }),
     supabase
       .from("profiles")
-      .select("id, full_name, role, store_role, store_id")
+      .select("id, full_name, role, store_id")
       .eq("is_active", true)
+      .eq("tenant_id", session.tenant_id ?? "")
       .order("full_name"),
   ]);
+  const storesList = (stores ?? []) as Store[];
 
   const userOpts = (users ?? []) as unknown as UserRow[];
 
@@ -80,10 +84,10 @@ export default async function StoresPage({
             <section className="space-y-3">
               <h2 className="text-xl font-semibold">All stores</h2>
               <div className="overflow-hidden rounded-2xl border border-neutral-200 bg-white dark:bg-transparent dark:border-neutral-800">
-                {(stores ?? []).map((s) => (
-                  <StoreRow key={s.id} store={s as Store} taxonomy={cats} users={userOpts} />
+                {storesList.map((store) => (
+                  <StoreRow key={store.id} store={store} taxonomy={cats} users={userOpts} />
                 ))}
-                {(stores ?? []).length === 0 && (
+                {storesList.length === 0 && (
                   <p className="p-6 text-center text-sm text-neutral-500">
                     No stores yet — add your first one above.
                   </p>
@@ -95,7 +99,7 @@ export default async function StoresPage({
         configPanel={
           <ConfigTabs
             taxonomy={<TaxonomyManager taxonomy={taxonomy} />}
-            system={<SystemSettings s={s} />}
+            system={<SystemSettings s={settings} />}
           />
         }
       />

@@ -43,36 +43,59 @@ export async function updateSystemSettingsAction(
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  // Defense in depth: verify admin role server-side.
+  // Defense in depth: only platform admins and tenant owners may edit settings.
   const { data: profile } = await supabase
     .from("profiles")
-    .select("role")
+    .select("role, tenant_id")
     .eq("id", user.id)
     .single();
-  if (profile?.role !== "system_admin") return { error: "Admins only" };
+  const privileged =
+    profile?.role === "platform_admin" || profile?.role === "tenant_owner";
+  if (!privileged) return { error: "Admins and owners only" };
 
-  const entries: [string, string][] = [
-    ["business_name", String(formData.get("business_name") ?? "").trim()],
-    ["currency_symbol", String(formData.get("currency_symbol") ?? "").trim()],
-    ["currency_locale", String(formData.get("currency_locale") ?? "").trim()],
-    ["size_unit", String(formData.get("size_unit") ?? "").trim()],
-    [
-      "perfume_features",
-      formData.get("perfume_features") === "on" ? "on" : "off",
-    ],
-  ];
+  // Owners always edit their own tenant's settings; a platform admin edits the
+  // tenant they are operating inside, or platform-global settings when no
+  // tenant context is present.
+  if (profile.role === "tenant_owner" && !profile.tenant_id) {
+    return { error: "No tenant context" };
+  }
 
-  const upserts = entries
-    .filter(([, v]) => v !== "")
-    .map(([key, value]) => ({ key, value }));
-  if (!upserts.length) return { error: "Nothing to save" };
+  const businessName = String(formData.get("business_name") ?? "").trim();
+  const currencySymbol = String(formData.get("currency_symbol") ?? "").trim();
+  const currencyLocale = String(formData.get("currency_locale") ?? "").trim();
+  const sizeUnit = String(formData.get("size_unit") ?? "").trim();
+  if (!businessName || !currencySymbol || !currencyLocale || !sizeUnit) {
+    return { error: "All settings are required" };
+  }
 
-  const { error } = await supabase
-    .from("app_settings")
-    .upsert(upserts, { onConflict: "key" });
-  if (error) return { error: error.message };
+  if (profile.role === "tenant_owner" || profile.tenant_id) {
+    const { error } = await supabase
+      .from("tenant_settings")
+      .upsert({
+        tenant_id: profile.tenant_id,
+        business_name: businessName,
+        currency_symbol: currencySymbol,
+        currency_locale: currencyLocale,
+        size_unit: sizeUnit,
+      })
+      .eq("tenant_id", profile.tenant_id);
+    if (error) return { error: error.message };
+  } else {
+    const entries: [string, string][] = [
+      ["business_name", businessName],
+      ["currency_symbol", currencySymbol],
+      ["currency_locale", currencyLocale],
+      ["size_unit", sizeUnit],
+      ["perfume_features", formData.get("perfume_features") === "on" ? "on" : "off"],
+    ];
+    const upserts = entries.map(([key, value]) => ({ key, value }));
+    const { error } = await supabase
+      .from("app_settings")
+      .upsert(upserts, { onConflict: "key" });
+    if (error) return { error: error.message };
+  }
 
   revalidateTag("config");
   revalidatePath("/", "layout");
-  return { success: "System settings saved" };
+  return { success: "Settings saved" };
 }

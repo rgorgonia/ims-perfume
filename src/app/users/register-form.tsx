@@ -8,8 +8,10 @@ const inputCls =
 
 export default function RegisterForm({
   stores,
+  isPlatformAdmin,
 }: {
   stores: { id: string; name: string }[];
+  isPlatformAdmin: boolean;
 }) {
   const [result, formAction, pending] = useActionState(registerUserAction, {});
   const [copied, setCopied] = useState(false);
@@ -28,19 +30,15 @@ export default function RegisterForm({
         <input name="email" type="email" required placeholder="email@example.com" className={inputCls} />
         <select name="role" className={inputCls}>
           <option value="store_manager">Store Manager</option>
-          <option value="system_admin">System Admin</option>
+          {isPlatformAdmin && <option value="tenant_owner">Tenant Owner</option>}
         </select>
         <select name="store_id" className={inputCls}>
-          <option value="">No store (admin)</option>
+          <option value="">No store assigned</option>
           {stores.map((s) => (
             <option key={s.id} value={s.id}>
               {s.name}
             </option>
           ))}
-        </select>
-        <select name="store_role" className={`${inputCls} sm:col-span-2`}>
-          <option value="manager">Inventory manager — can sell & manage stock, no revenue</option>
-          <option value="owner">Store owner — also sees revenue & capital for their store</option>
         </select>
         <button
           type="submit"

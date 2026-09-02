@@ -1,5 +1,5 @@
 import { revalidatePath } from "next/cache";
-import { requireAdmin } from "@/lib/auth";
+import { requirePrivileged } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { getSettings, formatMoney } from "@/lib/settings";
 
@@ -14,7 +14,8 @@ type Entry = {
 
 async function addEntry(formData: FormData) {
   "use server";
-  const session = await requireAdmin();
+  const session = await requirePrivileged();
+  if (!session.tenant_id) return;
   const supabase = await createClient();
 
   const entryType = String(formData.get("entry_type") ?? "");
@@ -32,6 +33,7 @@ async function addEntry(formData: FormData) {
   const { error } = await supabase.from("capital_ledger").insert({
     entry_type: entryType,
     store_id: storeId || null,
+    tenant_id: session.tenant_id,
     amount: signed,
     description: description || null,
     created_by: session.user.id,
@@ -43,20 +45,29 @@ async function addEntry(formData: FormData) {
 
 
 export default async function CapitalPage() {
-  await requireAdmin();
+  const session = await requirePrivileged();
   const supabase = await createClient();
 
   const [{ data: entries }, { data: stores }] = await Promise.all([
-    supabase
-      .from("capital_ledger")
-      .select("id, entry_type, amount, description, created_at, stores(name)")
-      .order("created_at", { ascending: false })
-      .limit(50),
-    supabase.from("stores").select("id, name").order("name"),
+    session.tenant_id
+      ? supabase
+          .from("capital_ledger")
+          .select("id, entry_type, amount, description, created_at, stores(name)")
+          .eq("tenant_id", session.tenant_id)
+          .order("created_at", { ascending: false })
+          .limit(50)
+      : supabase
+          .from("capital_ledger")
+          .select("id, entry_type, amount, description, created_at, stores(name)")
+          .order("created_at", { ascending: false })
+          .limit(50),
+    session.tenant_id
+      ? supabase.from("stores").select("id, name").eq("tenant_id", session.tenant_id).order("name")
+      : supabase.from("stores").select("id, name").order("name"),
   ]);
 
   const balance = (entries ?? []).reduce((a, e) => a + Number(e.amount), 0);
-  const { currencySymbol, currencyLocale } = await getSettings();
+  const { currencySymbol, currencyLocale } = await getSettings(session.tenant_id);
   const peso = (n: number) => formatMoney(n, currencySymbol, currencyLocale);
 
   const inputCls =

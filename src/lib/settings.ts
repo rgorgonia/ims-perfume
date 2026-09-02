@@ -1,6 +1,7 @@
 import { cache } from "react";
 import { unstable_cache } from "next/cache";
 import { createClient as createPublicClient } from "@supabase/supabase-js";
+import { createClient as createServerClient } from "@/lib/supabase/server";
 
 export type AppSettings = {
   businessName: string;
@@ -38,9 +39,7 @@ function getSettingsClient() {
   return settingsClient;
 }
 
-const getCachedSettings = unstable_cache(
-  // Plain object (not Map): unstable_cache serializes the return value,
-  // and Map is not JSON-serializable -> would throw at render time.
+const getCachedPlatformSettings = unstable_cache(
   async (): Promise<Record<string, string>> => {
     const { data } = await getSettingsClient()
       .from("app_settings")
@@ -53,18 +52,19 @@ const getCachedSettings = unstable_cache(
   { tags: ["config"], revalidate: 3600 }
 );
 
-/** Read the editable system settings, falling back to defaults. Server-side.
- *  unstable_cache: one DB read per hour max, invalidated via revalidateTag("config")
- *  (config save actions). React cache(): deduped per request. */
-export const getSettings: () => Promise<AppSettings> = cache(async function () {
-  const map = new Map(Object.entries(await getCachedSettings()));
-
+/** Parse a raw settings map (with picks) into a typed AppSettings. */
+function normalize(
+  map: Map<string, string>,
+  businessName?: string | null,
+  currencySymbol?: string | null,
+  currencyLocale?: string | null,
+  sizeUnit?: string | null
+): AppSettings {
   const cats = (map.get("product_categories") ?? "")
     .split(",")
     .map((c: string) => c.trim())
     .filter(Boolean);
 
-  // Parse the per-category options JSON; ignore malformed entries.
   let categoryOptions = DEFAULTS.categoryOptions;
   try {
     const parsed = JSON.parse(map.get("category_options") ?? "{}");
@@ -79,18 +79,52 @@ export const getSettings: () => Promise<AppSettings> = cache(async function () {
       categoryOptions = clean;
     }
   } catch {
-    // fall back to defaults on invalid JSON
+    /* fall back to defaults on invalid JSON */
   }
 
   return {
-    businessName: map.get("business_name") || DEFAULTS.businessName,
-    currencySymbol: map.get("currency_symbol") || DEFAULTS.currencySymbol,
-    currencyLocale: map.get("currency_locale") || DEFAULTS.currencyLocale,
-    sizeUnit: map.get("size_unit") || DEFAULTS.sizeUnit,
+    businessName: businessName || map.get("business_name") || DEFAULTS.businessName,
+    currencySymbol: currencySymbol || map.get("currency_symbol") || DEFAULTS.currencySymbol,
+    currencyLocale: currencyLocale || map.get("currency_locale") || DEFAULTS.currencyLocale,
+    sizeUnit: sizeUnit || map.get("size_unit") || DEFAULTS.sizeUnit,
     categories: cats.length ? cats : DEFAULTS.categories,
     categoryOptions,
     perfumeFeatures: (map.get("perfume_features") ?? "on") !== "off",
   };
+}
+
+/**
+ * Tenant-aware system settings. When a tenant_id is supplied (the normal case
+ * for a signed-in user), branding/currency/locale/size come from that tenant's
+ * tenant_settings row; the shared catalog (categories/category_options) still
+ * falls back to platform app_settings. React cache() keeps it per-request.
+ */
+export const getSettings: (
+  tenantId?: string | null
+) => Promise<AppSettings> = cache(async function (tenantId?: string | null) {
+  if (tenantId) {
+    try {
+      const supabase = await createServerClient();
+      const { data } = await supabase
+        .from("tenant_settings")
+        .select("business_name, currency_symbol, currency_locale, size_unit")
+        .eq("tenant_id", tenantId)
+        .maybeSingle();
+      const platform = new Map(Object.entries(await getCachedPlatformSettings()));
+      return normalize(
+        platform,
+        data?.business_name ?? null,
+        data?.currency_symbol ?? null,
+        data?.currency_locale ?? null,
+        data?.size_unit ?? null
+      );
+    } catch {
+      /* fall through to platform-level defaults */
+    }
+  }
+
+  const map = new Map(Object.entries(await getCachedPlatformSettings()));
+  return normalize(map);
 });
 
 /** Format a money amount with the configured currency. */

@@ -2,6 +2,7 @@
 
 import { revalidatePath, revalidateTag } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { requirePrivileged } from "@/lib/auth";
 import type { AttributeInputType } from "@/lib/services/taxonomy";
 
 type ActionState = { error?: string; success?: string };
@@ -14,21 +15,12 @@ const INPUT_TYPES: AttributeInputType[] = [
   "date",
 ];
 
-/** Verify the caller is a system_admin; returns the client or null. */
-async function requireAdminClient() {
+/** Require a tenant owner or platform admin; returns their tenant context. */
+async function requirePrivilegedContext() {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return null;
-
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .single();
-  if (profile?.role !== "system_admin") return null;
-  return supabase;
+  const session = await requirePrivileged();
+  if (!session.tenant_id) return { supabase, tenantId: null };
+  return { supabase, tenantId: session.tenant_id };
 }
 
 function invalidateConfig() {
@@ -37,13 +29,12 @@ function invalidateConfig() {
   revalidatePath("/", "layout");
 }
 
-/** Add a dynamic attribute definition to a category (admins only). */
+/** Add a dynamic attribute definition to a category (owner/admin only). */
 export async function addAttributeDefinitionAction(
   _prev: ActionState,
   formData: FormData
 ): Promise<ActionState> {
-  const supabase = await requireAdminClient();
-  if (!supabase) return { error: "Admins only" };
+  const { supabase, tenantId } = await requirePrivilegedContext();
 
   const categoryId = String(formData.get("category_id") ?? "");
   const attributeKey = String(formData.get("attribute_key") ?? "")
@@ -55,6 +46,7 @@ export async function addAttributeDefinitionAction(
   const required = formData.get("required") === "on";
   const sortOrder = Number(formData.get("sort_order") ?? 0);
 
+  if (!tenantId) return { error: "No tenant context" };
   if (!categoryId) return { error: "Category is required" };
   if (!attributeKey) return { error: "Attribute key is required" };
   if (!label) return { error: "Label is required" };
@@ -75,6 +67,7 @@ export async function addAttributeDefinitionAction(
     .from("category_attribute_definitions")
     .insert({
       category_id: categoryId,
+      tenant_id: tenantId,
       attribute_key: attributeKey,
       label,
       input_type: inputType,
@@ -88,34 +81,31 @@ export async function addAttributeDefinitionAction(
   return { success: `Attribute "${label}" added` };
 }
 
-/** Remove an attribute definition (admins only). */
+/** Remove an attribute definition (owner/admin only). */
 export async function deleteAttributeDefinitionAction(
   _prev: ActionState,
   formData: FormData
 ): Promise<ActionState> {
-  const supabase = await requireAdminClient();
-  if (!supabase) return { error: "Admins only" };
+  const { supabase, tenantId } = await requirePrivilegedContext();
 
   const id = String(formData.get("definition_id") ?? "");
   if (!id) return { error: "Definition id is required" };
 
-  const { error } = await supabase
-    .from("category_attribute_definitions")
-    .delete()
-    .eq("id", id);
+  let query = supabase.from("category_attribute_definitions").delete().eq("id", id);
+  if (tenantId) query = query.eq("tenant_id", tenantId);
+  const { error } = await query;
 
   if (error) return { error: error.message };
   invalidateConfig();
   return { success: "Attribute removed" };
 }
 
-/** Update a category's label, sort order, or active state (admins only). */
+/** Update a category's label, sort order, or active state (owner/admin only). */
 export async function updateCategoryAction(
   _prev: ActionState,
   formData: FormData
 ): Promise<ActionState> {
-  const supabase = await requireAdminClient();
-  if (!supabase) return { error: "Admins only" };
+  const { supabase, tenantId } = await requirePrivilegedContext();
 
   const id = String(formData.get("category_id") ?? "");
   const label = String(formData.get("label") ?? "").trim();
@@ -124,49 +114,45 @@ export async function updateCategoryAction(
   if (!id) return { error: "Category id is required" };
   if (!label) return { error: "Category label is required" };
 
-  const { error } = await supabase
-    .from("product_categories")
-    .update({
-      label,
-      sort_order: Number.isFinite(sortOrder) ? sortOrder : 0,
-      is_active: isActive,
-    })
-    .eq("id", id);
+  let query = supabase.from("product_categories").update({
+    label,
+    sort_order: Number.isFinite(sortOrder) ? sortOrder : 0,
+    is_active: isActive,
+  }).eq("id", id);
+  if (tenantId) query = query.eq("tenant_id", tenantId);
+  const { error } = await query;
 
   if (error) return { error: error.message };
   invalidateConfig();
   return { success: `Category "${label}" updated` };
 }
 
-/** Delete a category and its attribute definitions (admins only).
+/** Delete a category and its attribute definitions (owner/admin only).
  *  Variants keep their JSONB values but the keys become undeclared. */
 export async function deleteCategoryAction(
   _prev: ActionState,
   formData: FormData
 ): Promise<ActionState> {
-  const supabase = await requireAdminClient();
-  if (!supabase) return { error: "Admins only" };
+  const { supabase, tenantId } = await requirePrivilegedContext();
 
   const id = String(formData.get("category_id") ?? "");
   if (!id) return { error: "Category id is required" };
 
-  const { error } = await supabase
-    .from("product_categories")
-    .delete()
-    .eq("id", id);
+  let query = supabase.from("product_categories").delete().eq("id", id);
+  if (tenantId) query = query.eq("tenant_id", tenantId);
+  const { error } = await query;
 
   if (error) return { error: error.message };
   invalidateConfig();
   return { success: "Category deleted" };
 }
 
-/** Update an attribute definition (admins only). */
+/** Update an attribute definition (owner/admin only). */
 export async function updateAttributeDefinitionAction(
   _prev: ActionState,
   formData: FormData
 ): Promise<ActionState> {
-  const supabase = await requireAdminClient();
-  if (!supabase) return { error: "Admins only" };
+  const { supabase, tenantId } = await requirePrivilegedContext();
 
   const id = String(formData.get("definition_id") ?? "");
   if (!id) return { error: "Definition id is required" };
@@ -188,7 +174,7 @@ export async function updateAttributeDefinitionAction(
       return { error: "Select attributes need at least one option (comma-separated)" };
   }
 
-  const { error } = await supabase
+  let query = supabase
     .from("category_attribute_definitions")
     .update({
       label,
@@ -198,19 +184,21 @@ export async function updateAttributeDefinitionAction(
       sort_order: Number.isFinite(sortOrder) ? sortOrder : 0,
     })
     .eq("id", id);
+  if (tenantId) query = query.eq("tenant_id", tenantId);
+  const { error } = await query;
 
   if (error) return { error: error.message };
   invalidateConfig();
   return { success: `Attribute "${label}" updated` };
 }
 
-/** Add a new product category (admins only). */
+/** Add a new product category (owner/admin only). */
 export async function addCategoryAction(
   _prev: ActionState,
   formData: FormData
 ): Promise<ActionState> {
-  const supabase = await requireAdminClient();
-  if (!supabase) return { error: "Admins only" };
+  const { supabase, tenantId } = await requirePrivilegedContext();
+  if (!tenantId) return { error: "No tenant context" };
 
   const label = String(formData.get("label") ?? "").trim();
   if (!label) return { error: "Category label is required" };
@@ -223,7 +211,7 @@ export async function addCategoryAction(
 
   const { error } = await supabase
     .from("product_categories")
-    .insert({ slug, label });
+    .insert({ slug, label, tenant_id: tenantId });
 
   if (error) return { error: error.message };
   invalidateConfig();

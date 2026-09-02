@@ -7,12 +7,10 @@ export default function ReassignControl({
   userId,
   stores,
   currentStoreId,
-  currentRole,
 }: {
   userId: string;
   stores: { id: string; name: string }[];
   currentStoreId: string | null;
-  currentRole: string;
 }) {
   const [state, action, pending] = useActionState(reassignUserAction, { error: undefined });
   return (
@@ -30,20 +28,12 @@ export default function ReassignControl({
           </option>
         ))}
       </select>
-      <select
-        name="store_role"
-        defaultValue={currentStoreId ? currentRole : "manager"}
-        className="rounded-lg border border-black/10 px-2 py-1 text-xs dark:border-white/10 dark:bg-transparent"
-      >
-        <option value="manager">Inventory manager</option>
-        <option value="owner">Store owner</option>
-      </select>
       <button
         type="submit"
         disabled={pending}
         className="rounded-full border border-black/10 px-2.5 py-1 text-xs text-neutral-600 hover:bg-black/5 disabled:opacity-50 dark:border-white/10 dark:text-slate-300 dark:hover:bg-white/10"
       >
-        Apply
+        Assign store
       </button>
       {state.error && (
         <span className="w-full text-xs text-red-600 dark:text-red-400">{state.error}</span>
