@@ -1,17 +1,6 @@
 import { requirePlatformAdmin } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
-import TenantConsole from "./tenant-console";
-
-type TenantRow = {
-  id: string;
-  name: string;
-  slug: string;
-  is_active: boolean;
-  created_at: string;
-  store_count: number;
-  user_count: number;
-  sales_30d: number;
-};
+import TenantConsole, { type TenantRow, type PlatformTotals } from "./tenant-console";
 
 export default async function TenantsPage() {
   await requirePlatformAdmin();
@@ -46,8 +35,15 @@ export default async function TenantsPage() {
       .reduce((sum, s) => sum + Number(s.total), 0),
   }));
 
+  const totals: PlatformTotals = {
+    totalTenants: rows.length,
+    activeTenants: rows.filter((r) => r.is_active).length,
+    totalStores: (stores ?? []).length,
+    sales30d: rows.reduce((sum, r) => sum + r.sales_30d, 0),
+  };
+
   return (
-    <div className="mx-auto max-w-5xl space-y-8 py-6 sm:py-8">
+    <div className="mx-auto max-w-6xl space-y-6 py-6 sm:py-8">
       <section>
         <h1 className="text-2xl font-bold tracking-tight">Tenant console</h1>
         <p className="text-sm text-neutral-600 dark:text-neutral-400">
@@ -55,7 +51,7 @@ export default async function TenantsPage() {
           revokes all of its users&apos; database access (RLS-level, not just UI).
         </p>
       </section>
-      <TenantConsole tenants={rows} />
+      <TenantConsole tenants={rows} totals={totals} />
     </div>
   );
 }

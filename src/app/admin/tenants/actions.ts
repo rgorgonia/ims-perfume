@@ -128,6 +128,13 @@ export async function createTenantAction(
   };
 }
 
+export type PlatformTotals = {
+  totalTenants: number;
+  activeTenants: number;
+  totalStores: number;
+  sales30d: number;
+};
+
 /** Suspend / re-activate a tenant. Suspended tenants' users keep signing in,
  *  but their data is frozen by the is_active RLS predicate below. */
 export async function toggleTenantStatusAction(formData: FormData) {
@@ -140,4 +147,37 @@ export async function toggleTenantStatusAction(formData: FormData) {
 
   await supabase.from("tenants").update({ is_active: nextActive }).eq("id", tenantId);
   revalidatePath("/admin/tenants");
+}
+
+/** Reset a tenant owner's password to a new one-time temp password, shown once. */
+export async function resetOwnerPasswordAction(
+  _prev: TenantResult,
+  formData: FormData
+): Promise<TenantResult> {
+  await requirePlatformAdmin();
+  const tenantId = String(formData.get("tenant_id") ?? "");
+  if (!tenantId) return { error: "Missing tenant." };
+
+  const supabase = await createClient();
+  const { data: owner } = await supabase
+    .from("profiles")
+    .select("id, email")
+    .eq("tenant_id", tenantId)
+    .eq("role", "tenant_owner")
+    .maybeSingle();
+  if (!owner) return { error: "No tenant owner profile found for this tenant." };
+
+  const tempPassword = generateTempPassword();
+  const admin = createAdminClient();
+  const { error } = await admin.auth.admin.updateUserById(owner.id, {
+    password: tempPassword,
+  });
+  if (error) return { error: error.message };
+
+  revalidatePath("/admin/tenants");
+  return {
+    success: `Password reset for ${owner.email}.`,
+    tempPassword,
+    ownerEmail: owner.email,
+  };
 }
