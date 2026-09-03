@@ -91,6 +91,41 @@ export async function updateUserAssignmentAction(
   return { error: undefined };
 }
 
+/**
+ * Permanently delete a user (profile + auth account, cascade).
+ * Platform admins may delete any non-admin user; tenant owners may only
+ * delete store managers inside their own tenant.
+ */
+export async function deleteUserAction(formData: FormData) {
+  const session = await requirePrivileged();
+  const userId = String(formData.get("user_id") ?? "").trim();
+  if (!userId || userId === session.user.id) return;
+
+  const supabase = await createClient();
+  const { data: user } = await supabase
+    .from("profiles")
+    .select("role, tenant_id")
+    .eq("id", userId)
+    .single();
+  if (!user) return;
+  if (user.role === "platform_admin") return;
+  if (!session.isPlatformAdmin) {
+    if (user.role !== "store_manager") return; // owners can only remove managers
+    if (!session.tenant_id || user.tenant_id !== session.tenant_id) return;
+  }
+
+  // auth.users delete cascades to profiles (profiles_id_fkey ON DELETE CASCADE).
+  const admin = createAdminClient();
+  const { error } = await admin.auth.admin.deleteUser(userId);
+  if (error) {
+    console.error("deleteUser failed:", error.message);
+    return;
+  }
+
+  revalidatePath("/users");
+  revalidatePath("/stores");
+}
+
 export async function resetUserPasswordAction(formData: FormData) {
   await requirePrivileged();
   const userId = String(formData.get("user_id") ?? "").trim();

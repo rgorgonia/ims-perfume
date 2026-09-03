@@ -57,9 +57,15 @@ export default async function AuditPage({
 
       <section className="space-y-3">
         {rows.length === 0 ? (
-          <p className="rounded-2xl border border-dashed border-neutral-300 p-8 text-center text-sm text-neutral-500 dark:border-neutral-700 dark:text-slate-400">
-            No stock movements recorded yet.
-          </p>
+          <div className="rounded-2xl border border-dashed border-neutral-300 p-8 text-center text-sm text-neutral-500 dark:border-neutral-700 dark:text-slate-400">
+            <p className="font-medium text-neutral-600 dark:text-slate-300">
+              The audit log is active but empty.
+            </p>
+            <p className="mt-1">
+              Entries appear automatically as stock movements happen — record a
+              stock-in on the Inventory page or complete a sale, then come back.
+            </p>
+          </div>
         ) : (
           <div className="overflow-x-auto rounded-2xl border border-neutral-200 bg-white dark:border-neutral-800 dark:bg-transparent">
             <table className="w-full text-sm">

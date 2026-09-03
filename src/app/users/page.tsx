@@ -1,9 +1,11 @@
 import { revalidatePath } from "next/cache";
 import { requirePrivileged } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { getTaxonomy } from "@/lib/services/taxonomy";
 import RegisterForm from "./register-form";
 import ResetPasswordButton from "./reset-button";
+import DeleteUserButton from "./delete-user-button";
 import UserAssignmentControl from "./assignment-control";
 import { resetUserPasswordAction } from "./actions";
 
@@ -139,6 +141,9 @@ export default async function UsersPage({
                           {p.is_active ? "Disable" : "Enable"}
                         </button>
                       </form>
+                      {p.role !== "platform_admin" && (
+                        <DeleteUserButton userId={p.id} name={p.full_name} />
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -171,16 +176,22 @@ async function toggleActive(formData: FormData) {
     .eq("id", userId)
     .single();
   if (!current) return;
-  // Never let a caller disable a platform admin or a user outside their tenant.
-  if (current.role === "platform_admin") return;
-  if (session.tenant_id && current.tenant_id !== session.tenant_id) return;
+  // Never let a caller disable a platform admin or themselves.
+  if (current.role === "platform_admin" || userId === session.user.id) return;
+  // Platform admins operate globally; everyone else is confined to their tenant.
+  if (!session.isPlatformAdmin && session.tenant_id && current.tenant_id !== session.tenant_id) {
+    return;
+  }
 
-  await supabase
+  const { error } = await supabase
     .from("profiles")
     .update({ is_active: !current.is_active })
     .eq("id", userId);
+  if (error) console.error("toggleActive failed:", error.message);
   revalidatePath("/users");
 }
+
+
 
 function roleLabel(role: string): string {
   if (role === "platform_admin") return "Platform Admin";

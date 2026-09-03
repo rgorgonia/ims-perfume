@@ -88,9 +88,21 @@ export default async function InventoryPage() {
   const { sizeUnit } = await getSettings(session.tenant_id);
   const supabase = await createClient();
 
+  // Scope the store list to what the signed-in user may actually operate on:
+  // a bound user (owner with a store, or manager) sees only their store;
+  // tenant-bound users see their tenant's stores; platform admins see all.
+  const boundStoreId = session.profile?.store_id ?? null;
+  const storesQuery = supabase.from("stores").select("id, name, tenant_id").order("name");
+  if (boundStoreId) {
+    storesQuery.eq("id", boundStoreId);
+  } else if (!session.isPlatformAdmin && session.tenant_id) {
+    storesQuery.eq("tenant_id", session.tenant_id);
+  }
+  const storeIds = new Set<string>();
+
   const [{ data: stores }, { data: variants }, { data: levels }] =
     await Promise.all([
-      supabase.from("stores").select("id, name").order("name"),
+      storesQuery,
       supabase
         .from("variant_public_view")
         .select("id, sku, size_ml, products(name)")
@@ -102,10 +114,13 @@ export default async function InventoryPage() {
           "variant_id, store_id, quantity_on_hand, product_variants(sku, products(name)), stores(name)"
         ),
     ]);
+  for (const s of (stores ?? []) as { id: string }[]) storeIds.add(s.id);
 
   // Aggregate batch-level rows to variant × store totals
   const totals = new Map<string, { name: string; sku: string; store: string; qty: number }>();
   for (const l of (levels ?? []) as unknown as Level[]) {
+    // Skip stock held at stores this user cannot operate on.
+    if (!storeIds.has(l.store_id)) continue;
     const key = `${l.variant_id}:${l.store_id}`;
     const cur = totals.get(key);
     if (cur) cur.qty += l.quantity_on_hand;
@@ -132,26 +147,35 @@ export default async function InventoryPage() {
           action={recordMovement}
           className="grid gap-3 rounded-2xl border border-neutral-200 bg-white dark:bg-transparent p-4 sm:grid-cols-2 dark:border-neutral-800"
         >
-          <select name="store_id" required className={inputCls}>
-            <option value="">Select store *</option>
-            {(stores ?? []).map((s: Store) => (
-              <option key={s.id} value={s.id}>{s.name}</option>
-            ))}
-          </select>
-          <select name="variant_id" required className={inputCls}>
-            <option value="">Select variant *</option>
-            {((variants ?? []) as unknown as Variant[]).map((v) => (
-              <option key={v.id} value={v.id}>
-                {v.products?.name} — {v.sku} ({v.size_ml}
-                {sizeUnit})
-              </option>
-            ))}
-          </select>
-          <select name="movement_type" className={inputCls}>
-            <option value="purchase">Purchase (stock in)</option>
-            <option value="adjustment">Adjustment (+/-)</option>
-            <option value="wastage">Wastage (removes)</option>
-          </select>
+          <div className="space-y-1">
+            <label htmlFor="inv-store" className="text-xs font-medium text-neutral-600 dark:text-neutral-400">Store *</label>
+            <select id="inv-store" name="store_id" required className={inputCls}>
+              <option value="">Select store</option>
+              {(stores ?? []).map((s: Store) => (
+                <option key={s.id} value={s.id}>{s.name}</option>
+              ))}
+            </select>
+          </div>
+          <div className="space-y-1">
+            <label htmlFor="inv-variant" className="text-xs font-medium text-neutral-600 dark:text-neutral-400">Product variant *</label>
+            <select id="inv-variant" name="variant_id" required className={inputCls}>
+              <option value="">Select variant</option>
+              {((variants ?? []) as unknown as Variant[]).map((v) => (
+                <option key={v.id} value={v.id}>
+                  {v.products?.name} — {v.sku} ({v.size_ml}
+                  {sizeUnit})
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="space-y-1">
+            <label htmlFor="inv-movement" className="text-xs font-medium text-neutral-600 dark:text-neutral-400">Movement type</label>
+            <select id="inv-movement" name="movement_type" className={inputCls}>
+              <option value="purchase">Purchase (stock in)</option>
+              <option value="adjustment">Adjustment (+/-)</option>
+              <option value="wastage">Wastage (removes)</option>
+            </select>
+          </div>
           <div className="space-y-1">
             <label htmlFor="inv-qty" className="text-xs font-medium text-neutral-600 dark:text-neutral-400">Quantity *</label>
             <input
