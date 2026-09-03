@@ -34,7 +34,9 @@ export async function middleware(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   // Public auth pages reachable without a session
-  const isPublicAuthPage = request.nextUrl.pathname.startsWith("/login");
+  const isPublicAuthPage =
+    request.nextUrl.pathname.startsWith("/login") ||
+    request.nextUrl.pathname.startsWith("/auth/recovery");
 
   if (!user && !isPublicAuthPage) {
     const url = request.nextUrl.clone();

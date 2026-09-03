@@ -20,7 +20,7 @@ export default function ForgotPasswordPage() {
     setPending(true);
     const supabase = createClient();
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/login`,
+      redirectTo: `${window.location.origin}/auth/recovery`,
     });
     setPending(false);
     if (error) setError(error.message);
