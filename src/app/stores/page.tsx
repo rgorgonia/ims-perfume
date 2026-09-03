@@ -39,13 +39,18 @@ export default async function StoresPage({
   const cats = taxonomy.categories.map((c) => ({ slug: c.slug, label: c.label }));
 
   const [{ data: stores }, { data: users }] = await Promise.all([
-    session.tenant_id
+    // Platform admins operate globally — show every tenant's stores.
+    // Tenant-bound users see only their own tenant's stores.
+    !session.tenant_id || session.isPlatformAdmin
       ? supabase
           .from("stores")
-          .select("id, name, address, is_active, categories, store_type")
-          .eq("tenant_id", session.tenant_id)
+          .select("id, name, address, is_active, categories, store_type, tenant_id, tenants(name)")
           .order("name")
-      : Promise.resolve({ data: [] as unknown[] }),
+      : supabase
+          .from("stores")
+          .select("id, name, address, is_active, categories, store_type, tenant_id, tenants(name)")
+          .eq("tenant_id", session.tenant_id)
+          .order("name"),
     supabase
       .from("profiles")
       .select("id, full_name, role, store_id")
