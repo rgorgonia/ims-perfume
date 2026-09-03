@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import ThemeToggle from "@/components/theme-toggle";
 
 const inputCls =
   "w-full rounded-[10px] border border-black/10 bg-white/60 px-3 py-2 text-sm text-neutral-900 outline-none focus:border-neutral-500/60 focus:ring-2 focus:ring-neutral-400/40 dark:border-white/10 dark:bg-white/5 dark:text-white";
@@ -27,7 +28,12 @@ export default function ForgotPasswordPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="relative flex min-h-screen items-center justify-center p-8">
+      <div className="absolute right-5 top-5">
+        <ThemeToggle />
+      </div>
+      <main className="soft w-full max-w-sm space-y-6 rounded-[18px] p-8">
+        <div className="space-y-6">
       <div>
         <h1 className="text-xl font-bold tracking-tight">Reset your password</h1>
         <p className="mt-1 text-sm text-neutral-500 dark:text-slate-400">
@@ -80,6 +86,8 @@ export default function ForgotPasswordPage() {
           ← Back to sign in
         </Link>
       </p>
+        </div>
+      </main>
     </div>
   );
 }
