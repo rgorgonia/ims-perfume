@@ -9,7 +9,13 @@ import {
 } from "./actions";
 
 type Cat = { slug: string; label: string };
-type UserOpt = { id: string; full_name: string; role: string; store_id: string | null };
+type UserOpt = {
+  id: string;
+  full_name: string;
+  role: string;
+  store_id: string | null;
+  tenant_id: string | null;
+};
 
 type StoreT = {
   id: string;
@@ -18,6 +24,7 @@ type StoreT = {
   is_active: boolean;
   categories: string[] | null;
   store_type: string;
+  tenant_id: string;
 };
 
 const STORE_TYPES: [string, string][] = [
@@ -79,14 +86,21 @@ function StoreTypeAndManager({
   users,
   storeType,
   managerIds,
+  tenantId,
 }: {
   users: UserOpt[];
   storeType?: string;
   managerIds?: string[];
+  /** Only offer managers from this tenant (store's tenant / selected tenant). */
+  tenantId?: string;
 }) {
   const chosen = new Set(managerIds ?? []);
-  // Only store_manager users are assignable as store staff.
-  const managers = users.filter((u) => u.role === "store_manager");
+  // Only store_manager users of the relevant tenant are assignable.
+  const managers = users.filter(
+    (u) =>
+      u.role === "store_manager" &&
+      (!tenantId || !u.tenant_id || u.tenant_id === tenantId)
+  );
   return (
     <>
       <label className="space-y-1 block">
@@ -191,6 +205,7 @@ export function StoreRow({
           users={users}
           storeType={store.store_type}
           managerIds={managers.map((m) => m.id)}
+          tenantId={store.tenant_id}
         />
         <CategoryCheckboxes taxonomy={taxonomy} selected={store.categories} />
         <label className="flex items-center gap-2 text-sm font-medium">
@@ -283,6 +298,9 @@ export function CreateStoreForm({
   tenants?: { id: string; name: string }[];
 }) {
   const [state, action, pending] = useActionState(createStoreAction, {});
+  // Track the chosen tenant so the manager checkbox list only offers staff
+  // that can actually be assigned (assignment is tenant-validated server-side).
+  const [selectedTenant, setSelectedTenant] = useState<string | undefined>(tenants?.[0]?.id);
   return (
     <form
       action={action}
@@ -301,7 +319,12 @@ export function CreateStoreForm({
       {tenants && tenants.length > 0 && (
         <label className="space-y-1 block">
           <span className="text-xs font-medium">Tenant</span>
-          <select name="tenant_id" defaultValue={tenants[0]?.id} className={`${inputCls} w-full`}>
+          <select
+            name="tenant_id"
+            value={selectedTenant}
+            onChange={(e) => setSelectedTenant(e.target.value)}
+            className={`${inputCls} w-full`}
+          >
             {tenants.map((t) => (
               <option key={t.id} value={t.id}>
                 {t.name}
@@ -310,7 +333,7 @@ export function CreateStoreForm({
           </select>
         </label>
       )}
-      <StoreTypeAndManager users={users} />
+      <StoreTypeAndManager users={users} tenantId={selectedTenant} />
       <CategoryCheckboxes taxonomy={taxonomy} selected={null} />
       <div className="flex flex-wrap items-center gap-3">
         <button

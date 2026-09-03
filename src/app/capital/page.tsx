@@ -24,6 +24,20 @@ async function addEntry(formData: FormData) {
   const description = String(formData.get("description") ?? "").trim();
   if (!entryType || !amount) return;
 
+  // Derive the tenant from the selected store when one is targeted; a
+  // platform admin may record against any tenant, so never trust
+  // session.tenant_id for store-scoped entries.
+  let tenantId: string | null = session.tenant_id;
+  if (storeId) {
+    const { data: storeRow } = await supabase
+      .from("stores")
+      .select("tenant_id")
+      .eq("id", storeId)
+      .single();
+    tenantId = (storeRow?.tenant_id as string | undefined) ?? null;
+  }
+  if (!tenantId) return;
+
   // capital_in/out are business-wide (store_id null); allocations/expenses may target a store
   const signed =
     entryType === "capital_in"
@@ -33,7 +47,7 @@ async function addEntry(formData: FormData) {
   const { error } = await supabase.from("capital_ledger").insert({
     entry_type: entryType,
     store_id: storeId || null,
-    tenant_id: session.tenant_id,
+    tenant_id: tenantId,
     amount: signed,
     description: description || null,
     created_by: session.user.id,

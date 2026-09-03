@@ -33,6 +33,17 @@ async function recordMovement(formData: FormData) {
 
   if (!storeId || !variantId || !rawQty) return;
 
+  // Derive the tenant from the store being stocked — never from the session.
+  // A platform admin operates globally, so stamping session.tenant_id would
+  // attach cross-tenant stock/batches to the wrong tenant.
+  const { data: storeRow } = await supabase
+    .from("stores")
+    .select("tenant_id")
+    .eq("id", storeId)
+    .single();
+  const storeTenantId = storeRow?.tenant_id as string | undefined;
+  if (!storeTenantId) return;
+
   // Wastage always removes stock; purchase adds; adjustment is signed input.
   const quantity =
     movementType === "wastage"
@@ -59,7 +70,7 @@ async function recordMovement(formData: FormData) {
           product_variant_id: variantId,
           lot_number: lotNumber,
           expires_on: expiresOn || null,
-          tenant_id: session.tenant_id,
+          tenant_id: storeTenantId,
         })
         .select("id")
         .single();
@@ -70,7 +81,7 @@ async function recordMovement(formData: FormData) {
   const { error } = await supabase.from("stock_movements").insert({
     variant_id: variantId,
     store_id: storeId,
-    tenant_id: session.tenant_id,
+    tenant_id: storeTenantId,
     batch_id: batchId,
     movement_type: movementType,
     quantity,

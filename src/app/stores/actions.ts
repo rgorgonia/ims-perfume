@@ -134,6 +134,19 @@ export async function updateStoreAction(
   if (!id) return { error: "Store id is required" };
   if (!name) return { error: "Store name is required" };
 
+  // Resolve the store's own tenant: platform admins may edit any tenant's
+  // store; everyone else only stores inside their own tenant.
+  const { data: existing } = await supabase
+    .from("stores")
+    .select("tenant_id")
+    .eq("id", id)
+    .single();
+  if (!existing) return { error: "Store not found" };
+  const storeTenantId = existing.tenant_id as string;
+  if (!session.isPlatformAdmin && storeTenantId !== session.tenant_id) {
+    return { error: "Store not found in your tenant" };
+  }
+
   const { error } = await supabase
     .from("stores")
     .update({
@@ -143,23 +156,12 @@ export async function updateStoreAction(
       categories: parseCategories(formData),
       store_type: parseStoreType(formData),
     })
-    .eq("id", id)
-    .eq("tenant_id", session.tenant_id);
+    .eq("id", id);
   if (error) return { error: error.message };
-
-  // Defense in depth: guard against privilege hijacking across tenants.
-  const { data: chk } = await supabase
-    .from("stores")
-    .select("tenant_id")
-    .eq("id", id)
-    .single();
-  if (chk && chk.tenant_id !== session.tenant_id) {
-    return { error: "Store not found in your tenant" };
-  }
 
   const assignError = await applyManagerAssignment(
     supabase,
-    session.tenant_id,
+    storeTenantId,
     id,
     formData
   );

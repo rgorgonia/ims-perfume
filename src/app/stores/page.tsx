@@ -15,6 +15,7 @@ type Store = {
   is_active: boolean;
   categories: string[] | null;
   store_type: string;
+  tenant_id: string;
 };
 
 type UserRow = {
@@ -22,6 +23,7 @@ type UserRow = {
   full_name: string;
   role: string;
   store_id: string | null;
+  tenant_id: string | null;
 };
 
 export default async function StoresPage({
@@ -63,9 +65,11 @@ export default async function StoresPage({
           .order("name"),
     supabase
       .from("profiles")
-      .select("id, full_name, role, store_id")
+      .select("id, full_name, role, store_id, tenant_id")
       .eq("is_active", true)
-      .eq("tenant_id", session.tenant_id ?? "")
+      // Platform admins assign staff across every tenant; tenant-bound
+      // users only ever assign inside their own tenant.
+      .in("role", ["store_manager", "tenant_owner"])
       .order("full_name"),
   ]);
   const storesList = (stores ?? []) as Store[];
