@@ -38,6 +38,16 @@ export default async function StoresPage({
   ]);
   const cats = taxonomy.categories.map((c) => ({ slug: c.slug, label: c.label }));
 
+  // Platform admins can pick the tenant when creating a store.
+  let tenants: { id: string; name: string }[] = [];
+  if (session.isPlatformAdmin) {
+    const { data } = await supabase
+      .from("tenants")
+      .select("id, name")
+      .order("name");
+    tenants = (data ?? []) as { id: string; name: string }[];
+  }
+
   const [{ data: stores }, { data: users }] = await Promise.all([
     // Platform admins operate globally — show every tenant's stores.
     // Tenant-bound users see only their own tenant's stores.
@@ -83,7 +93,7 @@ export default async function StoresPage({
                 store&apos;s revenue &amp; capital; inventory managers handle
                 stock &amp; sales only.
               </p>
-              <CreateStoreForm taxonomy={cats} users={userOpts} />
+              <CreateStoreForm taxonomy={cats} users={userOpts} tenants={tenants} />
             </section>
 
             <section className="space-y-3">

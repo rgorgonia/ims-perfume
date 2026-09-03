@@ -77,6 +77,20 @@ export async function createStoreAction(
   const address = String(formData.get("address") ?? "").trim();
   if (!name) return { error: "Store name is required" };
 
+  // Platform admins may create the store in any tenant; everyone else is
+  // pinned to their own. Validate the chosen tenant actually exists.
+  let tenantId = session.tenant_id;
+  const requested = String(formData.get("tenant_id") ?? "").trim();
+  if (requested && session.isPlatformAdmin && requested !== session.tenant_id) {
+    const { data: tenant } = await supabase
+      .from("tenants")
+      .select("id")
+      .eq("id", requested)
+      .single();
+    if (!tenant) return { error: "Selected tenant not found" };
+    tenantId = requested;
+  }
+
   const { data: store, error } = await supabase
     .from("stores")
     .insert({
@@ -84,7 +98,7 @@ export async function createStoreAction(
       address: address || null,
       categories: parseCategories(formData),
       store_type: parseStoreType(formData),
-      tenant_id: session.tenant_id,
+      tenant_id: tenantId,
     })
     .select("id")
     .single();
@@ -92,7 +106,7 @@ export async function createStoreAction(
 
   const assignError = await applyManagerAssignment(
     supabase,
-    session.tenant_id,
+    tenantId,
     store.id,
     formData
   );

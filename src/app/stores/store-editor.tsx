@@ -276,9 +276,11 @@ export function NewStoreCategories({ taxonomy }: { taxonomy: Cat[] }) {
 export function CreateStoreForm({
   taxonomy,
   users,
+  tenants,
 }: {
   taxonomy: Cat[];
   users: UserOpt[];
+  tenants?: { id: string; name: string }[];
 }) {
   const [state, action, pending] = useActionState(createStoreAction, {});
   return (
@@ -296,6 +298,18 @@ export function CreateStoreForm({
           <input id="sn-addr" name="address" placeholder="Address (optional)" className={inputCls} />
         </div>
       </div>
+      {tenants && tenants.length > 0 && (
+        <label className="space-y-1 block">
+          <span className="text-xs font-medium">Tenant</span>
+          <select name="tenant_id" defaultValue={tenants[0]?.id} className={`${inputCls} w-full`}>
+            {tenants.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.name}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
       <StoreTypeAndManager users={users} />
       <CategoryCheckboxes taxonomy={taxonomy} selected={null} />
       <div className="flex flex-wrap items-center gap-3">
