@@ -39,9 +39,20 @@ export default function Login() {
       <div className="absolute right-5 top-5">
         <ThemeToggle />
       </div>
-      <main className="soft w-full max-w-sm space-y-6 rounded-[18px] p-8">
-        <h1 className="text-2xl font-bold">Sign in</h1>
-        <form className="space-y-4" onSubmit={handleSignIn}>
+      <div className="flex w-full max-w-4xl flex-col items-center gap-10 lg:flex-row lg:gap-16">
+        {/* Marketing panel */}
+        <div className="order-2 max-w-md text-center lg:order-1 lg:flex-1 lg:text-left">
+          <h1 className="text-3xl font-bold tracking-tight text-neutral-900 dark:text-white sm:text-4xl">
+            Streamline your store operations.
+          </h1>
+          <p className="mt-4 text-[15px] leading-relaxed text-neutral-500 dark:text-slate-400">
+            Manage your master catalog, track daily sales, and maintain secure
+            access controls across all your locations.
+          </p>
+        </div>
+        <main className="soft order-1 w-full max-w-sm space-y-6 rounded-[18px] p-8 lg:order-2">
+          <h2 className="text-2xl font-bold">Sign in</h2>
+          <form className="space-y-4" onSubmit={handleSignIn}>
           <div className="space-y-1">
             <label htmlFor="email" className="text-sm font-medium">
               Email
@@ -89,7 +100,8 @@ export default function Login() {
             </Link>
           </p>
         </form>
-      </main>
+        </main>
+      </div>
     </div>
   );
 }
