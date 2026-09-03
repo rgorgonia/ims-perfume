@@ -58,6 +58,7 @@ export default function AppShell({
   tenantName,
   storeName,
   businessName,
+  avatarUrl,
   children,
 }: {
   email: string;
@@ -67,6 +68,7 @@ export default function AppShell({
   tenantName: string | null;
   storeName: string | null;
   businessName: string;
+  avatarUrl: string | null;
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
@@ -100,17 +102,29 @@ export default function AppShell({
     (i) => !MOBILE_PRIMARY.some((m) => m.href === i.href),
   );
   const initials = email.slice(0, 2).toUpperCase();
+  // Sidebar/header title: the user's assigned store when they have one,
+  // otherwise the business (tenant) name.
+  const headerTitle = storeName || businessName;
 
   return (
     <div className="min-h-dvh">
       {/* Desktop sidebar — floating glass pane (spatial, both themes) */}
       <aside className="fixed inset-y-0 left-0 z-40 hidden w-64 flex-col gap-3 overflow-hidden border-r border-black/[0.08] bg-white/70 px-4 py-6 backdrop-blur-md md:flex md:inset-y-4 md:left-4 md:rounded-[28px] md:border md:border-white/60 md:shadow-[0_8px_32px_rgba(30,50,40,0.1)] md:dark:inset-y-4 md:dark:left-4 md:dark:rounded-[28px] md:dark:border md:dark:border-white/15 md:dark:bg-white/5 md:dark:shadow-[0_8px_32px_rgba(0,0,0,0.4)]">
         <div className="flex shrink-0 items-center gap-2.5 px-2">
-          <span className="flex h-9 w-9 items-center justify-center rounded-[10px] bg-neutral-900 font-semibold text-white dark:bg-white dark:text-neutral-900">
-            {(businessName || "I").trim().charAt(0).toUpperCase()}
-          </span>
-          <span className="min-w-0 flex-1 truncate text-[17px] font-semibold tracking-tight text-neutral-900 dark:text-white" title={businessName}>
-            {businessName}
+          {avatarUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={avatarUrl}
+              alt=""
+              className="h-9 w-9 shrink-0 rounded-[10px] object-cover"
+            />
+          ) : (
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-neutral-900 font-semibold text-white dark:bg-white dark:text-neutral-900">
+              {(headerTitle || "I").trim().charAt(0).toUpperCase()}
+            </span>
+          )}
+          <span className="min-w-0 flex-1 truncate text-[17px] font-semibold tracking-tight text-neutral-900 dark:text-white" title={headerTitle}>
+            {headerTitle}
           </span>
         </div>
         <div className="shrink-0 space-y-1 px-2">
@@ -194,10 +208,19 @@ export default function AppShell({
 
       {/* Mobile top bar — frosted */}
       <header className="sticky top-0 z-40 flex items-center gap-3 border-b border-black/[0.08] bg-white/70 px-4 py-3 backdrop-blur-md md:hidden dark:border-white/10 dark:bg-[#1c1c1e]/70">
-        <span className="flex h-9 w-9 items-center justify-center rounded-full bg-neutral-900 text-xs font-semibold text-white dark:bg-white dark:text-neutral-900">
-          {initials}
-        </span>
-        <span className="flex-1 text-[17px] font-semibold tracking-tight text-neutral-900 dark:text-white">{businessName}</span>
+        {avatarUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={avatarUrl}
+            alt=""
+            className="h-9 w-9 shrink-0 rounded-full object-cover"
+          />
+        ) : (
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-neutral-900 text-xs font-semibold text-white dark:bg-white dark:text-neutral-900">
+            {initials}
+          </span>
+        )}
+        <span className="flex-1 truncate text-[17px] font-semibold tracking-tight text-neutral-900 dark:text-white">{headerTitle}</span>
         <button
           onClick={toggleTheme}
           aria-label="Toggle theme"

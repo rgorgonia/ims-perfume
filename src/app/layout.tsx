@@ -93,6 +93,7 @@ export default async function RootLayout({
             tenantName={tenantName}
             storeName={storeName}
             businessName={settings.businessName}
+            avatarUrl={session.profile?.avatar_url ?? null}
           >
             {children}
           </AppShell>

@@ -11,6 +11,7 @@ export type Profile = {
   /** Assigned store — only meaningful for store_manager. */
   store_id: string | null;
   is_active: boolean;
+  avatar_url: string | null;
 };
 
 export type Session = {
@@ -34,7 +35,7 @@ export async function getSession(): Promise<Session | null> {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("full_name, role, tenant_id, store_id, is_active")
+    .select("full_name, role, tenant_id, store_id, is_active, avatar_url")
     .eq("id", user.id)
     .single();
 

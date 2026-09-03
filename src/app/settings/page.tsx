@@ -17,6 +17,8 @@ export default async function SettingsPage() {
           email={user.email}
           fullName={profile?.full_name ?? ""}
           role={profile?.role ?? "store_manager"}
+          userId={user.id}
+          avatarUrl={profile?.avatar_url ?? null}
         />
       </div>
     </div>

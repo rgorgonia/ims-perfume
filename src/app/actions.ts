@@ -20,13 +20,26 @@ export async function updateProfileAction(formData: FormData) {
   const fullName = String(formData.get("full_name") ?? "").trim();
   if (!fullName) return { error: "Name cannot be empty" };
 
+  // avatar_url is optional; only accept URLs pointing at this user's own
+  // folder in the public avatars bucket (defense against forged values).
+  let avatarUrl: string | null = null;
+  const rawAvatar = String(formData.get("avatar_url") ?? "").trim();
+  if (rawAvatar) {
+    const marker = `/object/public/avatars/${user.id}/`;
+    if (!rawAvatar.includes(marker)) {
+      return { error: "Invalid avatar URL" };
+    }
+    avatarUrl = rawAvatar;
+  }
+
   const { error } = await supabase
     .from("profiles")
-    .update({ full_name: fullName })
+    .update({ full_name: fullName, avatar_url: avatarUrl })
     .eq("id", user.id);
 
   if (error) return { error: error.message };
   revalidatePath("/settings");
+  revalidatePath("/", "layout");
   return { success: "Profile updated" };
 }
 

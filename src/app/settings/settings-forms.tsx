@@ -13,12 +13,18 @@ export default function SettingsForms({
   email,
   fullName,
   role,
+  userId,
+  avatarUrl,
 }: {
   email: string;
   fullName: string;
   role: string;
+  userId: string;
+  avatarUrl: string | null;
 }) {
   const [name, setName] = useState(fullName);
+  const [avatar, setAvatar] = useState<string | null>(avatarUrl);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [profileMsg, setProfileMsg] = useState<Msg>(null);
   const [savingProfile, setSavingProfile] = useState(false);
   const [newPassword, setNewPassword] = useState("");
@@ -26,12 +32,67 @@ export default function SettingsForms({
   const [pwMsg, setPwMsg] = useState<Msg>(null);
   const [savingPw, setSavingPw] = useState(false);
 
+  async function handlePhoto(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = ""; // allow re-selecting the same file
+    if (!file) return;
+    setProfileMsg(null);
+    if (!file.type.startsWith("image/")) {
+      setProfileMsg({ ok: false, text: "Please choose an image file" });
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      setProfileMsg({ ok: false, text: "Image must be under 2 MB" });
+      return;
+    }
+    setUploadingPhoto(true);
+    const supabase = createClient();
+    const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
+    const path = `${userId}/avatar-${Date.now()}.${ext}`;
+    const { error: upErr } = await supabase.storage
+      .from("avatars")
+      .upload(path, file, { contentType: file.type, upsert: true });
+    if (upErr) {
+      setProfileMsg({ ok: false, text: upErr.message });
+      setUploadingPhoto(false);
+      return;
+    }
+    const { data } = supabase.storage.from("avatars").getPublicUrl(path);
+    setAvatar(data.publicUrl);
+    // Persist immediately so the sidebar picks it up without a separate save.
+    const fd = new FormData();
+    fd.set("full_name", name);
+    fd.set("avatar_url", data.publicUrl);
+    const res = await updateProfileAction(fd);
+    setProfileMsg(
+      res?.error
+        ? { ok: false, text: res.error }
+        : { ok: true, text: "Profile photo updated" }
+    );
+    setUploadingPhoto(false);
+  }
+
+  async function removePhoto() {
+    setProfileMsg(null);
+    setAvatar(null);
+    const fd = new FormData();
+    fd.set("full_name", name);
+    fd.set("avatar_url", "");
+    const res = await updateProfileAction(fd);
+    setProfileMsg(
+      res?.error
+        ? { ok: false, text: res.error }
+        : { ok: true, text: "Profile photo removed" }
+    );
+  }
+
   async function handleProfile(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setProfileMsg(null);
     setSavingProfile(true);
     const fd = new FormData();
     fd.set("full_name", name);
+    if (avatar) fd.set("avatar_url", avatar);
     const res = await updateProfileAction(fd);
     setProfileMsg(
       res?.error
@@ -88,9 +149,51 @@ export default function SettingsForms({
           Email and role can only be changed by a system admin on the Users page.
         </p>
       </section>
-      {/* Profile name */}
+      {/* Profile name + photo */}
       <section className="soft min-w-0 rounded-[18px] p-6">
         <h2 className="mb-4 text-[15px] font-semibold">Profile</h2>
+        <div className="mb-4 flex items-center gap-4">
+          {avatar ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={avatar}
+              alt="Profile photo"
+              className="h-16 w-16 shrink-0 rounded-full object-cover"
+            />
+          ) : (
+            <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-neutral-900 text-lg font-semibold text-white dark:bg-white dark:text-neutral-900">
+              {(name || email).trim().charAt(0).toUpperCase()}
+            </span>
+          )}
+          <div className="space-y-2">
+            <label
+              htmlFor="avatar"
+              className="inline-block cursor-pointer rounded-full border border-black/10 px-4 py-1.5 text-sm font-medium hover:bg-black/[0.04] dark:border-white/10 dark:hover:bg-white/[0.06]"
+            >
+              {uploadingPhoto ? "Uploading…" : avatar ? "Change photo" : "Upload photo"}
+            </label>
+            <input
+              id="avatar"
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handlePhoto}
+              disabled={uploadingPhoto}
+            />
+            {avatar && (
+              <button
+                type="button"
+                onClick={removePhoto}
+                className="block text-xs text-red-600 hover:underline dark:text-red-400"
+              >
+                Remove photo
+              </button>
+            )}
+            <p className="text-xs text-neutral-500 dark:text-slate-400">
+              JPG or PNG, up to 2 MB.
+            </p>
+          </div>
+        </div>
         <form className="space-y-4" onSubmit={handleProfile}>
           <div className="space-y-1">
             <label htmlFor="full_name" className="text-sm font-medium">
