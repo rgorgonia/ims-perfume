@@ -34,6 +34,11 @@ async function createProduct(
   "use server";
   const session = await requireUser();
   const supabase = await createClient();
+  const accessible = await getAccessibleStores(session, supabase);
+  const activeStoreId = await getActiveStore(accessible);
+  const storeId = activeStoreId
+    ? String(formData.get("store_id") ?? "").trim() || activeStoreId
+    : null;
 
   const name = String(formData.get("name") ?? "").trim();
   const brand = String(formData.get("brand") ?? "").trim();
@@ -65,6 +70,7 @@ async function createProduct(
       p_size_ml: sizeMl,
       p_retail_price: retailPrice,
       p_cost_price: isPrivileged ? costPrice : null,
+      p_store_id: storeId,
     }
   );
   if (error || !created)
@@ -92,12 +98,18 @@ export default async function ProductsPage() {
   ] = await Promise.all([
     getSettings(session.tenant_id, activeStoreId),
     getTaxonomy(session.tenant_id),
-    supabase
-      .from("products")
-      .select(
-        "id, name, brand, concentration, category, retail_price, is_active, product_variants(id, sku, size_ml, retail_price)"
-      )
-      .order("name"),
+    (() => {
+      // Catalog isolation: a selected store shows only its own products; "All
+      // stores" shows every product across the caller's stores.
+      const q = supabase
+        .from("products")
+        .select(
+          "id, name, brand, concentration, category, retail_price, is_active, product_variants(id, sku, size_ml, retail_price)"
+        )
+        .order("name");
+      if (activeStoreId) q.eq("store_id", activeStoreId);
+      return q;
+    })(),
     // RLS-scoped: admins see all stores, managers only their own.
     supabase.from("inventory_levels").select("variant_id, store_id, quantity_on_hand"),
   ]);
@@ -133,6 +145,7 @@ export default async function ProductsPage() {
           taxonomy={taxonomy}
           sizeUnit={sizeUnit}
           isAdmin={isPrivileged}
+          activeStoreId={activeStoreId}
         />
       </section>
 

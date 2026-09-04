@@ -17,11 +17,13 @@ export default function AddProductForm({
   taxonomy,
   sizeUnit,
   isAdmin,
+  activeStoreId,
 }: {
   action: (prev: ProductResult, formData: FormData) => Promise<ProductResult>;
   taxonomy: Taxonomy;
   sizeUnit: string;
   isAdmin: boolean;
+  activeStoreId: string | null;
 }) {
   const [res, submit, pending] = useActionState(action, {} as ProductResult);
 
@@ -46,6 +48,7 @@ export default function AddProductForm({
           {res.success}
         </p>
       )}
+      {activeStoreId && <input type="hidden" name="store_id" value={activeStoreId} />}
       <div className="space-y-1">
         <label htmlFor="pf-name" className="text-xs font-medium text-neutral-600 dark:text-neutral-400">Product name *</label>
         <input id="pf-name" name="name" required placeholder="Product name *" className={inputCls} />
