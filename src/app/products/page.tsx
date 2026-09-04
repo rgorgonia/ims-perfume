@@ -13,12 +13,12 @@ type Variant = {
   sku: string;
   size_ml: number;
   retail_price: number;
+  attributes?: Record<string, string | number | boolean> | null;
 };
 type Product = {
   id: string;
   name: string;
   brand: string | null;
-  concentration: string | null;
   category: string | null;
   retail_price: number;
   is_active: boolean;
@@ -82,10 +82,15 @@ async function createProduct(
   return { success: `Product "${name}" created with its first variant.` };
 }
 
-export default async function ProductsPage() {
+export default async function ProductsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ category?: string }>;
+}) {
   const session = await requirePrivileged();
   const isPrivileged = session.isPlatformAdmin || session.isTenantOwner;
   const supabase = await createClient();
+  const { category } = await searchParams;
   // Respect the globally selected store (cookie): when a single store is
   // active, availability and currency/size unit reflect only that store.
   const accessible = await getAccessibleStores(session, supabase);
@@ -104,10 +109,11 @@ export default async function ProductsPage() {
       const q = supabase
         .from("products")
         .select(
-          "id, name, brand, concentration, category, retail_price, is_active, product_variants(id, sku, size_ml, retail_price)"
+          "id, name, brand, category, retail_price, is_active, product_variants(id, sku, size_ml, retail_price, attributes)"
         )
         .order("name");
       if (activeStoreId) q.eq("store_id", activeStoreId);
+      if (category) q.eq("category", category);
       return q;
     })(),
     // RLS-scoped: admins see all stores, managers only their own.
@@ -135,6 +141,18 @@ export default async function ProductsPage() {
       (sum, v) => sum + (availByVariant.get(v.id) ?? 0),
       0
     );
+
+  // Distinct attribute values across a product's variants (data-driven
+  // "contents" — no hardcoded domain fields like concentration).
+  const productAttributes = (p: Product) => {
+    const out = new Set<string>();
+    for (const v of p.product_variants ?? []) {
+      for (const value of Object.values(v.attributes ?? {})) {
+        if (value !== "" && value != null) out.add(String(value));
+      }
+    }
+    return [...out];
+  };
 
   return (
     <div className="mx-auto max-w-5xl space-y-8 py-6 sm:py-8">
@@ -170,7 +188,7 @@ export default async function ProductsPage() {
                   <th className="px-4 py-2">Product</th>
                   <th className="px-4 py-2">Brand</th>
                   <th className="px-4 py-2">Category</th>
-                  <th className="px-4 py-2">Concentration</th>
+                  <th className="px-4 py-2">Attributes</th>
                   <th className="px-4 py-2">Variants</th>
                   <th className="px-4 py-2">Available</th>
                   <th className="px-4 py-2">Retail</th>
@@ -190,7 +208,9 @@ export default async function ProductsPage() {
                         p.category ??
                         "—"}
                     </td>
-                    <td className="px-4 py-2">{p.concentration ?? "—"}</td>
+                    <td className="px-4 py-2">
+                      {productAttributes(p).length ? productAttributes(p).join(", ") : "—"}
+                    </td>
                     <td className="px-4 py-2">
                       {(p.product_variants ?? []).length === 0 ? (
                         <Link

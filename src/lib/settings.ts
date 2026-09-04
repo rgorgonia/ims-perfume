@@ -11,7 +11,7 @@ export type AppSettings = {
   categories: string[];
   /** Per-category options for the secondary dropdown (e.g. concentration). */
   categoryOptions: Record<string, string[]>;
-  perfumeFeatures: boolean;
+  perfumeFeatures?: boolean; // deprecated — kept for type back-compat
 };
 
 const DEFAULTS: AppSettings = {
@@ -21,7 +21,7 @@ const DEFAULTS: AppSettings = {
   sizeUnit: "ml",
   categories: ["Fragrance", "Body care", "Home scent", "Cosmetic", "Accessory"],
   categoryOptions: { Fragrance: ["EDT", "EDP", "EXTRAIT", "EDC", "OIL"] },
-  perfumeFeatures: true,
+  // perfumeFeatures removed — superseded by the dynamic taxonomy
 };
 
 /** Shared anon client for cached reads (unstable_cache cannot use the
@@ -89,7 +89,6 @@ function normalize(
     sizeUnit: sizeUnit || map.get("size_unit") || DEFAULTS.sizeUnit,
     categories: cats.length ? cats : DEFAULTS.categories,
     categoryOptions,
-    perfumeFeatures: (map.get("perfume_features") ?? "on") !== "off",
   };
 }
 

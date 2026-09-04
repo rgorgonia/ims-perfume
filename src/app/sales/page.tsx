@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
@@ -146,7 +147,11 @@ export default async function SalesPage() {
         </h1>
         <p className="text-sm text-neutral-600 dark:text-neutral-400">
           Stock is deducted automatically via the{" "}
-          <code>deduct_sale_stock</code> database trigger.
+          <code>deduct_sale_stock</code> database trigger. Running low?{" "}
+          <Link href="/inventory" className="font-medium underline underline-offset-2 hover:text-neutral-900 dark:hover:text-white">
+            Add stock
+          </Link>
+          .
         </p>
         <SaleForm
           action={recordSale}
@@ -179,7 +184,11 @@ export default async function SalesPage() {
                   <td className="px-4 py-2">
                     {new Date(s.created_at).toLocaleString()}
                   </td>
-                  <td className="px-4 py-2">{s.stores?.name ?? "—"}</td>
+                  <td className="px-4 py-2">
+                    {s.stores?.name ? (
+                      <Link href="/stores" className="hover:underline">{s.stores.name}</Link>
+                    ) : "—"}
+                  </td>
                   <td className="px-4 py-2 capitalize">
                     {s.payment_method.replace("_", " ")}
                   </td>

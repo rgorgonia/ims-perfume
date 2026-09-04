@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
@@ -15,7 +16,11 @@ type Level = {
   variant_id: string;
   store_id: string;
   quantity_on_hand: number;
-  product_variants: { sku: string; products: { name: string } | null } | null;
+  product_variants: {
+    product_id: string;
+    sku: string;
+    products: { id: string; name: string } | null;
+  } | null;
   stores: { name: string } | null;
 };
 
@@ -128,13 +133,13 @@ export default async function InventoryPage() {
       supabase
         .from("inventory_levels")
         .select(
-          "variant_id, store_id, quantity_on_hand, product_variants(sku, products(name)), stores(name)"
+          "variant_id, store_id, quantity_on_hand, product_variants(product_id, sku, products(id, name)), stores(name)"
         ),
     ]);
   for (const s of (stores ?? []) as { id: string }[]) storeIds.add(s.id);
 
   // Aggregate batch-level rows to variant × store totals
-  const totals = new Map<string, { name: string; sku: string; store: string; qty: number }>();
+  const totals = new Map<string, { name: string; productId: string | null; sku: string; store: string; qty: number }>();
   for (const l of (levels ?? []) as unknown as Level[]) {
     // Skip stock held at stores this user cannot operate on.
     if (!storeIds.has(l.store_id)) continue;
@@ -146,6 +151,7 @@ export default async function InventoryPage() {
     else
       totals.set(key, {
         name: l.product_variants?.products?.name ?? "Unknown",
+        productId: l.product_variants?.product_id ?? l.product_variants?.products?.id ?? null,
         sku: l.product_variants?.sku ?? "—",
         store: l.stores?.name ?? "—",
         qty: l.quantity_on_hand,
@@ -264,9 +270,19 @@ export default async function InventoryPage() {
             <tbody>
               {rows.map((r, i) => (
                 <tr key={i} className="border-t border-neutral-200 dark:border-neutral-800">
-                  <td className="px-4 py-2 font-medium">{r.name}</td>
+                  <td className="px-4 py-2 font-medium">
+                    {r.productId ? (
+                      <Link href={`/products/${r.productId}`} className="hover:underline">
+                        {r.name}
+                      </Link>
+                    ) : (
+                      r.name
+                    )}
+                  </td>
                   <td className="px-4 py-2">{r.sku}</td>
-                  <td className="px-4 py-2">{r.store}</td>
+                  <td className="px-4 py-2">
+                    <Link href="/stores" className="hover:underline">{r.store}</Link>
+                  </td>
                   <td className={`px-4 py-2 text-right font-medium ${r.qty <= 5 ? "text-amber-600 dark:text-amber-400" : ""}`}>
                     {r.qty}
                   </td>

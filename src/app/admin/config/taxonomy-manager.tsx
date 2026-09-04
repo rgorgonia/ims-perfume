@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
+import Link from "next/link";
 import {
   addCategoryAction,
   updateCategoryAction,
@@ -112,7 +113,9 @@ function CategoryRow({ category }: { category: Category }) {
           className="block max-w-full truncate rounded-2xl border border-black/[0.08] bg-black/[0.04] px-3 py-1 text-sm dark:border-white/10 dark:bg-white/10"
           title={`${category.label} (${category.slug})`}
         >
-          {category.label}
+          <Link href={`/products?category=${category.slug}`} className="hover:underline">
+            {category.label}
+          </Link>
           <span className="ml-1.5 font-mono text-xs text-neutral-500">{category.slug}</span>
           {!category.is_active && (
             <span className="ml-1.5 text-xs text-red-500">inactive</span>

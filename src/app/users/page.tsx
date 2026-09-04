@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { revalidatePath } from "next/cache";
 import { requirePrivileged } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
@@ -110,7 +111,7 @@ export default async function UsersPage({
                 <tr key={p.id} className="border-t border-neutral-200 dark:border-neutral-800">
                   <td className="px-4 py-2 font-medium">{p.full_name}</td>
                   <td className="px-4 py-2">{roleLabel(p.role)}</td>
-                  <td className="px-4 py-2">{p.stores?.name ?? "—"}</td>
+                  <td className="px-4 py-2">{p.stores?.name ? <Link href="/stores" className="hover:underline">{p.stores.name}</Link> : "—"}</td>
                   <td className="px-4 py-2">
                     {p.is_active ? "Active" : "Disabled"}
                   </td>

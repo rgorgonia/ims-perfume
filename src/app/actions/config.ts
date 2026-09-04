@@ -209,11 +209,53 @@ export async function addCategoryAction(
     .replace(/^-|-$/g, "");
   if (!slug) return { error: "Category label must contain letters or numbers" };
 
-  const { error } = await supabase
+  const { data: cat, error } = await supabase
     .from("product_categories")
-    .insert({ slug, label, tenant_id: tenantId });
+    .insert({ slug, label, tenant_id: tenantId })
+    .select("id")
+    .single();
 
   if (error) return { error: error.message };
+
+  // Seed starter attribute definitions so variant forms render fields and
+  // variants carry contents (attributes JSONB) out of the box. Mirrors the
+  // 018_taxonomy_attribute_seed.sql backfill.
+  const defs: Record<string, unknown>[] = [
+    {
+      category_id: cat.id,
+      tenant_id: tenantId,
+      attribute_key: "notes",
+      label: "Notes",
+      input_type: "text",
+      options: null,
+      required: false,
+      sort_order: 10,
+    },
+  ];
+  if (/(fragrance|perfume|cologne)/.test(slug)) {
+    defs.unshift({
+      category_id: cat.id,
+      tenant_id: tenantId,
+      attribute_key: "concentration",
+      label: "Concentration",
+      input_type: "select",
+      options: ["EDT", "EDP", "Parfum", "EdC"],
+      required: false,
+      sort_order: 0,
+    });
+    defs.push({
+      category_id: cat.id,
+      tenant_id: tenantId,
+      attribute_key: "scent_family",
+      label: "Scent family",
+      input_type: "select",
+      options: ["Floral", "Woody", "Oriental", "Fresh", "Gourmand"],
+      required: false,
+      sort_order: 1,
+    });
+  }
+  await supabase.from("category_attribute_definitions").insert(defs);
+
   invalidateConfig();
   return { success: `Category "${label}" added` };
 }

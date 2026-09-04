@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { requireUser } from "@/lib/auth";
 import { getSettings, formatMoney } from "@/lib/settings";
@@ -183,12 +184,12 @@ export default async function Dashboard() {
           <p className="text-xl font-bold">{lowStock.length}</p>
         </div>
         {isPrivileged ? (
-          <div className={statCls}>
+          <Link href="/capital" className={statCls}>
             <p className="text-xs text-neutral-500">Capital position</p>
             <p className="text-xl font-bold">
               {capital === null ? "—" : peso(capital)}
             </p>
-          </div>
+          </Link>
         ) : (
           <div className={statCls}>
             <p className="text-xs text-neutral-500">{canSeeRevenue ? "Stores visible" : "Recent sales"}</p>
@@ -249,7 +250,9 @@ export default async function Dashboard() {
               <tbody>
                 {summaries.map((s) => (
                   <tr key={s.id} className="border-t border-neutral-200 dark:border-neutral-800">
-                    <td className="px-4 py-2 font-medium">{s.name}</td>
+                    <td className="px-4 py-2 font-medium">
+                      <Link href="/stores" className="hover:underline">{s.name}</Link>
+                    </td>
                     <td className="px-4 py-2 text-right">{peso(s.revenue)}</td>
                     <td className="px-4 py-2 text-right">{peso(s.profit)}</td>
                     <td className="px-4 py-2 text-right">
@@ -279,16 +282,18 @@ export default async function Dashboard() {
           <h2 className="text-lg font-semibold">Low stock</h2>
           <ul className="space-y-2 rounded-2xl border border-neutral-200 bg-white dark:bg-transparent p-4 text-sm dark:border-neutral-800">
             {lowStock.map((r, i) => (
-              <li key={i} className="flex items-center justify-between gap-4">
-                <span>
-                  {r.product_variants?.products?.name ?? "Unknown"}{" "}
-                  <span className="text-neutral-500">
-                    ({r.product_variants?.sku})
+              <li key={i}>
+                <Link href="/inventory" className="flex items-center justify-between gap-4">
+                  <span>
+                    {r.product_variants?.products?.name ?? "Unknown"}{" "}
+                    <span className="text-neutral-500">
+                      ({r.product_variants?.sku})
+                    </span>
                   </span>
-                </span>
-                <span className="font-medium text-amber-600 dark:text-amber-400">
-                  {r.quantity_on_hand} left
-                </span>
+                  <span className="font-medium text-amber-600 dark:text-amber-400">
+                    {r.quantity_on_hand} left
+                  </span>
+                </Link>
               </li>
             ))}
             {lowStock.length === 0 && (
@@ -304,12 +309,14 @@ export default async function Dashboard() {
           <h2 className="text-lg font-semibold">Recent sales</h2>
           <ul className="space-y-2 rounded-2xl border border-neutral-200 bg-white dark:bg-transparent p-4 text-sm dark:border-neutral-800">
             {((sales ?? []) as unknown as Sale[]).map((s) => (
-              <li key={s.id} className="flex items-center justify-between gap-4">
-                <span className="text-neutral-600 dark:text-neutral-400">
-                  {new Date(s.created_at).toLocaleDateString()} ·{" "}
-                  {s.stores?.name ?? "—"}
-                </span>
-                <span className="font-medium">{peso(s.total)}</span>
+              <li key={s.id}>
+                <Link href="/sales" className="flex items-center justify-between gap-4">
+                  <span className="text-neutral-600 dark:text-neutral-400">
+                    {new Date(s.created_at).toLocaleDateString()} ·{" "}
+                    {s.stores?.name ?? "—"}
+                  </span>
+                  <span className="font-medium">{peso(s.total)}</span>
+                </Link>
               </li>
             ))}
             {(sales ?? []).length === 0 && (

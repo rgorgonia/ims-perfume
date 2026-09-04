@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { revalidatePath } from "next/cache";
 import { requirePrivileged } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
@@ -178,7 +179,7 @@ export default async function CapitalPage() {
                   <td className="px-4 py-2 capitalize">
                     {e.entry_type.replace("_", " ")}
                   </td>
-                  <td className="px-4 py-2">{e.stores?.name ?? "—"}</td>
+                  <td className="px-4 py-2">{e.stores?.name ? <Link href="/stores" className="hover:underline">{e.stores.name}</Link> : "—"}</td>
                   <td className="px-4 py-2">{e.description ?? "—"}</td>
                   <td className={`px-4 py-2 text-right font-medium ${Number(e.amount) < 0 ? "text-red-600 dark:text-red-400" : "text-emerald-600 dark:text-emerald-400"}`}>
                     {peso(Number(e.amount))}

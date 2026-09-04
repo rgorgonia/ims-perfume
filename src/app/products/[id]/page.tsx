@@ -161,7 +161,6 @@ export default async function ProductPage({
           {product.brand ? ` — ${product.brand}` : ""}
         </h1>
         <p className="text-sm text-neutral-600 dark:text-neutral-400">
-          {product.concentration ? `${product.concentration} · ` : ""}
           {product.category
             ? `${taxonomy.categories.find((c) => c.slug === product.category)?.label ?? product.category} · `
             : ""}
@@ -173,9 +172,11 @@ export default async function ProductPage({
         <h2 className="text-lg font-semibold">Variants</h2>
         <ul className="space-y-1 rounded-2xl border border-neutral-200 bg-white dark:bg-transparent p-4 text-sm dark:border-neutral-800">
           {variantList.map((v) => (
-            <li key={v.id} className="flex justify-between">
+            <li key={v.id} className="flex items-center justify-between gap-3">
               <span>
-                {v.sku} — {v.size_ml}{sizeUnit} {v.variant_type}
+                <Link href="/inventory" className="hover:underline">
+                  {v.sku} — {v.size_ml}{sizeUnit} {v.variant_type}
+                </Link>
                 {v.attributes &&
                   Object.entries(v.attributes).length > 0 && (
                     <span className="text-neutral-500">
@@ -186,7 +187,12 @@ export default async function ProductPage({
                     </span>
                   )}
               </span>
-              <span>{money(Number(v.retail_price))}</span>
+              <span className="flex items-center gap-3">
+                <Link href="/inventory" className="text-xs text-neutral-500 underline underline-offset-2 hover:text-neutral-900 dark:hover:text-white">
+                  Add stock
+                </Link>
+                <span>{money(Number(v.retail_price))}</span>
+              </span>
             </li>
           ))}
         </ul>
@@ -209,9 +215,12 @@ export default async function ProductPage({
         </form>
       </section>
 
-      {product.category === "fragrance" && (
+      {(product.category === "fragrance" ||
+        (taxonomy.attributesByCategory[product.category ?? ""] ?? []).some(
+          (d) => d.attribute_key.includes("note")
+        )) && (
       <section className="space-y-3">
-        <h2 className="text-lg font-semibold">Scent profile</h2>
+        <h2 className="text-lg font-semibold">Notes &amp; tags</h2>
         <div className="grid gap-3 sm:grid-cols-3">
           {noteTypes.map(([type, label]) => (
             <div key={type} className="rounded-2xl border border-neutral-200 bg-white dark:bg-transparent p-4 dark:border-neutral-800">

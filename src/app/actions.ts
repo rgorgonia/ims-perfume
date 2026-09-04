@@ -139,7 +139,6 @@ export async function updateSystemSettingsAction(
       ["currency_symbol", currencySymbol],
       ["currency_locale", currencyLocale],
       ["size_unit", sizeUnit],
-      ["perfume_features", formData.get("perfume_features") === "on" ? "on" : "off"],
     ];
     const upserts = entries.map(([key, value]) => ({ key, value }));
     const { error } = await supabase

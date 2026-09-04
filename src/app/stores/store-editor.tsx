@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import {
   createStoreAction,
   updateStoreAction,
@@ -300,6 +301,19 @@ export function StoreRow({
                 .map((m) => `👤 ${m.full_name}`)
                 .join(" · ")}
         </p>
+        <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
+          {members.length > 0 && (
+            <Link href="/users" className="text-neutral-500 underline underline-offset-2 hover:text-neutral-900 dark:text-slate-400 dark:hover:text-white">
+              Manage staff
+            </Link>
+          )}
+          <Link href="/products" className="text-neutral-500 underline underline-offset-2 hover:text-neutral-900 dark:text-slate-400 dark:hover:text-white">
+            Products
+          </Link>
+          <Link href="/admin/config" className="text-neutral-500 underline underline-offset-2 hover:text-neutral-900 dark:text-slate-400 dark:hover:text-white">
+            Taxonomy
+          </Link>
+        </div>
       </div>
       <div className="flex flex-wrap items-center gap-2">
         <button type="button" onClick={() => setEditing(true)} className={ghostBtn}>
