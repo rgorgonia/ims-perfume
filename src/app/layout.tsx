@@ -68,8 +68,6 @@ export default async function RootLayout({
     storeName = (s.data as { name: string } | null)?.name ?? null;
   }
 
-  const settings = await getSettings(session?.tenant_id ?? null);
-
   // Global store switcher: the stores this user can operate on + the active pick.
   let stores: { id: string; name: string }[] = [];
   let activeStoreId: string | null = null;
@@ -77,6 +75,9 @@ export default async function RootLayout({
     stores = await getAccessibleStores(session, supabase);
     activeStoreId = await getActiveStore(stores);
   }
+
+  // Settings reflect the active store's own config when one is selected.
+  const settings = await getSettings(session?.tenant_id ?? null, activeStoreId);
 
   const roleLabel =
     session?.profile?.role === "platform_admin"

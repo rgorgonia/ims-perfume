@@ -2,6 +2,7 @@ import { requirePrivileged } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { getTaxonomy } from "@/lib/services/taxonomy";
 import { getSettings } from "@/lib/settings";
+import { getAccessibleStores, getActiveStore } from "@/lib/store-scope";
 import StoreHub from "./store-hub";
 import { StoreRow, CreateStoreForm } from "./store-editor";
 import ConfigTabs from "@/app/admin/config/config-tabs";
@@ -33,11 +34,16 @@ export default async function StoresPage({
 }) {
   const session = await requirePrivileged();
   const supabase = await createClient();
-  const [{ tab }, taxonomy, settings] = await Promise.all([
+  const [{ tab }, taxonomy] = await Promise.all([
     searchParams,
     getTaxonomy(session.tenant_id),
-    getSettings(session.tenant_id),
   ]);
+  const accessibleStores = await getAccessibleStores(session, supabase);
+  const activeStore = await getActiveStore(accessibleStores);
+  const settings = await getSettings(session.tenant_id, activeStore);
+  const activeStoreName = activeStore
+    ? (accessibleStores.find((s) => s.id === activeStore)?.name ?? null)
+    : null;
   const cats = taxonomy.categories.map((c) => ({ slug: c.slug, label: c.label }));
 
   // Platform admins can pick the tenant when creating a store.
@@ -118,7 +124,9 @@ export default async function StoresPage({
         configPanel={
           <ConfigTabs
             taxonomy={<TaxonomyManager taxonomy={taxonomy} />}
-            system={<SystemSettings s={settings} />}
+            system={
+              <SystemSettings s={settings} storeId={activeStore} storeName={activeStoreName} />
+            }
           />
         }
       />

@@ -98,25 +98,48 @@ function normalize(
  * for a signed-in user), branding/currency/locale/size come from that tenant's
  * tenant_settings row; the shared catalog (categories/category_options) still
  * falls back to platform app_settings. React cache() keeps it per-request.
+ *
+ * When storeId is supplied (a store is globally selected), the store's own
+ * settings row takes priority and any missing field falls back to the
+ * tenant-wide row — so each store's config is shown only for that store.
  */
 export const getSettings: (
-  tenantId?: string | null
-) => Promise<AppSettings> = cache(async function (tenantId?: string | null) {
+  tenantId?: string | null,
+  storeId?: string | null
+) => Promise<AppSettings> = cache(async function (
+  tenantId?: string | null,
+  storeId?: string | null
+) {
   if (tenantId) {
     try {
       const supabase = await createServerClient();
-      const { data } = await supabase
-        .from("tenant_settings")
-        .select("business_name, currency_symbol, currency_locale, size_unit")
-        .eq("tenant_id", tenantId)
-        .maybeSingle();
+      const cols = "business_name, currency_symbol, currency_locale, size_unit";
+      let row: Record<string, string | null> | null = null;
+      if (storeId) {
+        const { data } = await supabase
+          .from("tenant_settings")
+          .select(cols)
+          .eq("tenant_id", tenantId)
+          .eq("store_id", storeId)
+          .maybeSingle();
+        row = data;
+      }
+      if (!row) {
+        const { data } = await supabase
+          .from("tenant_settings")
+          .select(cols)
+          .eq("tenant_id", tenantId)
+          .is("store_id", null)
+          .maybeSingle();
+        row = data;
+      }
       const platform = new Map(Object.entries(await getCachedPlatformSettings()));
       return normalize(
         platform,
-        data?.business_name ?? null,
-        data?.currency_symbol ?? null,
-        data?.currency_locale ?? null,
-        data?.size_unit ?? null
+        row?.business_name ?? null,
+        row?.currency_symbol ?? null,
+        row?.currency_locale ?? null,
+        row?.size_unit ?? null
       );
     } catch {
       /* fall through to platform-level defaults */

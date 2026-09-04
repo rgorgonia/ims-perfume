@@ -82,13 +82,13 @@ async function recordSale(
 
 export default async function SalesPage() {
   const session = await requireUser();
-  const { currencySymbol, sizeUnit } = await getSettings(session.tenant_id);
   const supabase = await createClient();
 
   // Respect the globally selected store (cookie): when one store is active,
   // only its sales/stock are shown so store contents never mix.
   const accessible = await getAccessibleStores(session, supabase);
   const activeStoreId = await getActiveStore(accessible);
+  const { currencySymbol, sizeUnit } = await getSettings(session.tenant_id, activeStoreId);
 
   const [
     { data: stores },

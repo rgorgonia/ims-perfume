@@ -97,8 +97,10 @@ async function recordMovement(formData: FormData) {
 export default async function InventoryPage() {
   const session = await requireUser();
   const isPrivileged = session.isPlatformAdmin || session.isTenantOwner;
-  const { sizeUnit } = await getSettings(session.tenant_id);
   const supabase = await createClient();
+  const accessible = await getAccessibleStores(session, supabase);
+  const activeStoreId = await getActiveStore(accessible);
+  const { sizeUnit } = await getSettings(session.tenant_id, activeStoreId);
 
   // Scope the store list to what the signed-in user may actually operate on:
   // a bound user (owner with a store, or manager) sees only their store;
@@ -113,8 +115,7 @@ export default async function InventoryPage() {
   const storeIds = new Set<string>();
   // Respect the globally selected store (cookie). When a single store is
   // active, only its inventory is shown so store contents never mix.
-  const accessible = await getAccessibleStores(session, supabase);
-  const activeStoreId = await getActiveStore(accessible);
+  // (accessible/activeStoreId computed above)
 
   const [{ data: stores }, { data: variants }, { data: levels }] =
     await Promise.all([

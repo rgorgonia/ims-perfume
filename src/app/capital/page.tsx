@@ -2,6 +2,7 @@ import { revalidatePath } from "next/cache";
 import { requirePrivileged } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { getSettings, formatMoney } from "@/lib/settings";
+import { getAccessibleStores, getActiveStore } from "@/lib/store-scope";
 
 type Entry = {
   id: string;
@@ -81,7 +82,8 @@ export default async function CapitalPage() {
   ]);
 
   const balance = (entries ?? []).reduce((a, e) => a + Number(e.amount), 0);
-  const { currencySymbol, currencyLocale } = await getSettings(session.tenant_id);
+  const activeStoreId = await getActiveStore(await getAccessibleStores(session, supabase));
+  const { currencySymbol, currencyLocale } = await getSettings(session.tenant_id, activeStoreId);
   const peso = (n: number) => formatMoney(n, currencySymbol, currencyLocale);
 
   const inputCls =

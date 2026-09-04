@@ -81,18 +81,58 @@ export async function updateSystemSettingsAction(
     return { error: "All settings are required" };
   }
 
-  if (profile.role === "tenant_owner" || profile.tenant_id) {
-    const { error } = await supabase
-      .from("tenant_settings")
-      .upsert({
-        tenant_id: profile.tenant_id,
-        business_name: businessName,
-        currency_symbol: currencySymbol,
-        currency_locale: currencyLocale,
-        size_unit: sizeUnit,
-      })
-      .eq("tenant_id", profile.tenant_id);
-    if (error) return { error: error.message };
+  // A globally selected store gets its own settings row, owned by the
+  // STORE's tenant (a platform admin without a tenant context may still
+  // configure a specific store). "All stores" edits the tenant-wide
+  // defaults of the admin's own tenant, or platform settings when none.
+  const storeId = String(formData.get("store_id") ?? "").trim() || null;
+  let targetTenantId: string | null = profile.tenant_id ?? null;
+  if (storeId) {
+    const { data: storeRow } = await supabase
+      .from("stores")
+      .select("tenant_id")
+      .eq("id", storeId)
+      .maybeSingle();
+    if (!storeRow) return { error: "Store not found" };
+    if (
+      profile.role !== "platform_admin" &&
+      storeRow.tenant_id !== profile.tenant_id
+    ) {
+      return { error: "Store not found in your organization" };
+    }
+    targetTenantId = storeRow.tenant_id;
+  }
+
+  if (targetTenantId) {
+    const base = {
+      tenant_id: targetTenantId,
+      store_id: storeId,
+      business_name: businessName,
+      currency_symbol: currencySymbol,
+      currency_locale: currencyLocale,
+      size_unit: sizeUnit,
+    };
+    const updateQuery = storeId
+      ? supabase
+          .from("tenant_settings")
+          .update(base)
+          .eq("store_id", storeId)
+          .eq("tenant_id", targetTenantId)
+          .select("tenant_id")
+      : supabase
+          .from("tenant_settings")
+          .update(base)
+          .is("store_id", null)
+          .eq("tenant_id", targetTenantId)
+          .select("tenant_id");
+    const { data: updated, error: updErr } = await updateQuery;
+    if (updErr) return { error: updErr.message };
+    if (!updated || updated.length === 0) {
+      const { error: insErr } = await supabase
+        .from("tenant_settings")
+        .insert(base);
+      if (insErr) return { error: insErr.message };
+    }
   } else {
     const entries: [string, string][] = [
       ["business_name", businessName],

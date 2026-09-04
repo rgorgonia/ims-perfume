@@ -80,13 +80,17 @@ export default async function ProductsPage() {
   const session = await requirePrivileged();
   const isPrivileged = session.isPlatformAdmin || session.isTenantOwner;
   const supabase = await createClient();
+  // Respect the globally selected store (cookie): when a single store is
+  // active, availability and currency/size unit reflect only that store.
+  const accessible = await getAccessibleStores(session, supabase);
+  const activeStoreId = await getActiveStore(accessible);
   const [
     { currencySymbol, currencyLocale, sizeUnit },
     taxonomy,
     { data: products },
     { data: inventory },
   ] = await Promise.all([
-    getSettings(session.tenant_id),
+    getSettings(session.tenant_id, activeStoreId),
     getTaxonomy(session.tenant_id),
     supabase
       .from("products")
@@ -98,11 +102,6 @@ export default async function ProductsPage() {
     supabase.from("inventory_levels").select("variant_id, store_id, quantity_on_hand"),
   ]);
   const money = (n: number) => formatMoney(n, currencySymbol, currencyLocale);
-
-  // Respect the globally selected store (cookie): when a single store is
-  // active, availability reflects only that store so contents never mix.
-  const accessible = await getAccessibleStores(session, supabase);
-  const activeStoreId = await getActiveStore(accessible);
 
   // Sum total units on hand per variant (across the caller's visible stores).
   const availByVariant = new Map<string, number>();

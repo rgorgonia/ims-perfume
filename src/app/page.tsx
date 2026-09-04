@@ -27,8 +27,6 @@ export default async function Dashboard() {
   const isPrivileged = session.isPlatformAdmin || session.isTenantOwner;
   // Store managers don't see revenue/profit/capital; owners & platform admins do.
   const canSeeRevenue = isPrivileged;
-  const { currencySymbol, currencyLocale } = await getSettings(session.tenant_id);
-  const peso = (n: number) => formatMoney(n, currencySymbol, currencyLocale);
 
   const since30d = new Date(Date.now() - 30 * 24 * 3600 * 1000).toISOString();
 
@@ -36,6 +34,8 @@ export default async function Dashboard() {
   // the dashboard aggregates only that store so contents never mix.
   const accessible = await getAccessibleStores(session, supabase);
   const activeStoreId = await getActiveStore(accessible);
+  const { currencySymbol, currencyLocale } = await getSettings(session.tenant_id, activeStoreId);
+  const peso = (n: number) => formatMoney(n, currencySymbol, currencyLocale);
 
   // All independent queries run in ONE parallel round-trip batch.
   // The RPC aggregates every RLS-visible store in a single DB call.
