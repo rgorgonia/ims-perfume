@@ -160,7 +160,14 @@ export default async function InventoryPage() {
   return (
     <div className="mx-auto max-w-5xl space-y-8 py-6 sm:py-8">
       <section className="space-y-4">
-        <h1 className="text-2xl font-bold">Record stock movement</h1>
+        <h1 className="text-2xl font-bold">
+          Record stock movement
+          {activeStoreId && (
+            <span className="ml-3 align-middle inline-flex items-center rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-800 dark:bg-amber-950/50 dark:text-amber-300">
+              scoped to {accessible.find((s) => s.id === activeStoreId)?.name}
+            </span>
+          )}
+        </h1>
         <form
           action={recordMovement}
           className="grid gap-3 rounded-2xl border border-neutral-200 bg-white dark:bg-transparent p-4 sm:grid-cols-2 dark:border-neutral-800"
@@ -168,10 +175,14 @@ export default async function InventoryPage() {
           <div className="space-y-1">
             <label htmlFor="inv-store" className="text-xs font-medium text-neutral-600 dark:text-neutral-400">Store *</label>
             <select id="inv-store" name="store_id" required className={inputCls}>
-              <option value="">Select store</option>
-              {(stores ?? []).map((s: Store) => (
-                <option key={s.id} value={s.id}>{s.name}</option>
-              ))}
+              {((stores ?? []) as Store[]).filter((s: Store) => !activeStoreId || s.id === activeStoreId).length > 1 && (
+                <option value="">Select store</option>
+              )}
+              {((stores ?? []) as Store[])
+                .filter((s: Store) => !activeStoreId || s.id === activeStoreId)
+                .map((s: Store) => (
+                  <option key={s.id} value={s.id}>{s.name}</option>
+                ))}
             </select>
           </div>
           <div className="space-y-1">

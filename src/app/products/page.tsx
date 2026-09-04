@@ -138,7 +138,14 @@ export default async function ProductsPage() {
       </section>
 
       <section className="space-y-3">
-        <h2 className="text-xl font-semibold">Catalog</h2>
+        <h2 className="text-xl font-semibold">
+          Catalog
+          {activeStoreId && (
+            <span className="ml-3 align-middle inline-flex items-center rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-800 dark:bg-amber-950/50 dark:text-amber-300">
+              availability for {accessible.find((s) => s.id === activeStoreId)?.name}
+            </span>
+          )}
+        </h2>
         {((products ?? []) as unknown as Product[]).length === 0 ? (
           <div className="flex items-center justify-center rounded-2xl border border-neutral-200 bg-white px-4 py-10 text-neutral-500 dark:border-neutral-800 dark:bg-transparent">
             No products yet.

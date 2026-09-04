@@ -136,14 +136,23 @@ export default async function SalesPage() {
   return (
     <div className="mx-auto max-w-5xl space-y-8 py-6 sm:py-8">
       <section className="space-y-4">
-        <h1 className="text-2xl font-bold">Record sale</h1>
+        <h1 className="text-2xl font-bold">
+          Record sale
+          {activeStoreId && (
+            <span className="ml-3 align-middle inline-flex items-center rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-800 dark:bg-amber-950/50 dark:text-amber-300">
+              scoped to {accessible.find((s) => s.id === activeStoreId)?.name}
+            </span>
+          )}
+        </h1>
         <p className="text-sm text-neutral-600 dark:text-neutral-400">
           Stock is deducted automatically via the{" "}
           <code>deduct_sale_stock</code> database trigger.
         </p>
         <SaleForm
           action={recordSale}
-          stores={(stores ?? []) as unknown as Store[]}
+          stores={((stores ?? []) as unknown as Store[]).filter(
+            (s) => !activeStoreId || s.id === activeStoreId
+          )}
           variants={(variants ?? []) as unknown as Variant[]}
           availability={availability}
           sizeUnit={sizeUnit}

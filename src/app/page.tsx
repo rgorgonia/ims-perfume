@@ -143,7 +143,11 @@ export default async function Dashboard() {
             Welcome back, {session.profile?.full_name ?? "there"}
           </h1>
           <p className="text-sm text-neutral-600 dark:text-neutral-400">
-            {isPrivileged ? "Business overview — last 30 days" : "Your store — last 30 days"}
+            {isPrivileged
+              ? activeStoreId
+                ? `Store overview: ${accessible.find((s) => s.id === activeStoreId)?.name} — last 30 days`
+                : "Business overview — last 30 days"
+              : "Your store — last 30 days"}
           </p>
         </div>
       </header>
