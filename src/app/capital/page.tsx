@@ -63,26 +63,35 @@ export default async function CapitalPage() {
   const session = await requirePrivileged();
   const supabase = await createClient();
 
+  // Respect the globally selected store (cookie): when a single store is
+  // active, show only that store's capital entries so store data never mixes —
+  // across stores AND across tenants (a platform admin operating globally).
+  const activeStoreId = await getActiveStore(await getAccessibleStores(session, supabase));
+
   const [{ data: entries }, { data: stores }] = await Promise.all([
-    session.tenant_id
-      ? supabase
-          .from("capital_ledger")
-          .select("id, entry_type, amount, description, created_at, stores(name)")
-          .eq("tenant_id", session.tenant_id)
-          .order("created_at", { ascending: false })
-          .limit(50)
-      : supabase
-          .from("capital_ledger")
-          .select("id, entry_type, amount, description, created_at, stores(name)")
-          .order("created_at", { ascending: false })
-          .limit(50),
+    (() => {
+      let q = supabase
+        .from("capital_ledger")
+        .select("id, entry_type, amount, description, created_at, stores(name)")
+        .order("created_at", { ascending: false })
+        .limit(50);
+      // A selected store shows only its own per-store entries (business-wide
+      // capital_in/out rows belong to the whole organization and are excluded).
+      if (activeStoreId) {
+        q = q.eq("store_id", activeStoreId);
+      } else if (session.tenant_id) {
+        // No store selected: owners see their own tenant; platform admins get
+        // all tenants (platform oversight).
+        q = q.eq("tenant_id", session.tenant_id);
+      }
+      return q;
+    })(),
     session.tenant_id
       ? supabase.from("stores").select("id, name").eq("tenant_id", session.tenant_id).order("name")
       : supabase.from("stores").select("id, name").order("name"),
   ]);
 
   const balance = (entries ?? []).reduce((a, e) => a + Number(e.amount), 0);
-  const activeStoreId = await getActiveStore(await getAccessibleStores(session, supabase));
   const { currencySymbol, currencyLocale } = await getSettings(session.tenant_id, activeStoreId);
   const peso = (n: number) => formatMoney(n, currencySymbol, currencyLocale);
 

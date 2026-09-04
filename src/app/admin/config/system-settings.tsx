@@ -85,7 +85,7 @@ export default function SystemSettings({
         </div>
         <div className="space-y-1">
           <label htmlFor="currency_locale" className="text-sm font-medium">
-            Number locale
+            Currency locale
           </label>
           <input
             id="currency_locale"

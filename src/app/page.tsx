@@ -56,7 +56,13 @@ export default async function Dashboard() {
       return q;
     })(),
     isPrivileged
-      ? supabase.from("capital_ledger").select("amount")
+      ? (() => {
+          let q = supabase.from("capital_ledger").select("amount");
+          // Scoped to the selected store when one is active (its per-store
+          // entries only, never another store's or another tenant's).
+          if (activeStoreId) q = q.eq("store_id", activeStoreId);
+          return q;
+        })()
       : Promise.resolve({ data: null } as { data: { amount: number }[] | null }),
     canSeeRevenue
       ? Promise.resolve({ count: null as number | null })

@@ -67,7 +67,7 @@ export async function updateUserAssignmentAction(
   }
 
   // Validate the store belongs to the target tenant.
-  let finalStoreId: string | null = storeId || null;
+  const finalStoreId: string | null = storeId || null;
   if (finalStoreId) {
     const { data: store } = await supabase
       .from("stores")

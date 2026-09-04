@@ -110,7 +110,25 @@ export const getSettings: (
   tenantId?: string | null,
   storeId?: string | null
 ) {
-  if (tenantId) {
+  // A platform admin has no tenant id, but a selected store always belongs to
+  // one. Resolve it so per-store config applies across tenants too — Store A in
+  // Tenant 1 and Store B in Tenant 2 each get their own isolated settings.
+  let effectiveTenantId: string | null = tenantId ?? null;
+  if (storeId && !effectiveTenantId) {
+    try {
+      const supabase = await createServerClient();
+      const { data } = await supabase
+        .from("stores")
+        .select("tenant_id")
+        .eq("id", storeId)
+        .maybeSingle();
+      effectiveTenantId = (data as { tenant_id: string | null } | null)?.tenant_id ?? null;
+    } catch {
+      effectiveTenantId = null;
+    }
+  }
+
+  if (effectiveTenantId) {
     try {
       const supabase = await createServerClient();
       const cols = "business_name, currency_symbol, currency_locale, size_unit";
@@ -119,7 +137,7 @@ export const getSettings: (
         const { data } = await supabase
           .from("tenant_settings")
           .select(cols)
-          .eq("tenant_id", tenantId)
+          .eq("tenant_id", effectiveTenantId)
           .eq("store_id", storeId)
           .maybeSingle();
         row = data;
@@ -128,7 +146,7 @@ export const getSettings: (
         const { data } = await supabase
           .from("tenant_settings")
           .select(cols)
-          .eq("tenant_id", tenantId)
+          .eq("tenant_id", effectiveTenantId)
           .is("store_id", null)
           .maybeSingle();
         row = data;

@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import {
   Activity,
   Building2,
@@ -383,14 +384,14 @@ function TenantActionsMenu({
           style={{ position: "fixed", top: pos.top, left: pos.left }}
           className="z-50 w-64 overflow-hidden rounded-xl border border-neutral-200 bg-white py-1 shadow-lg dark:border-neutral-800 dark:bg-neutral-900"
         >
-          <a
+          <Link
             role="menuitem"
             href="/"
             className="flex items-center gap-2 px-3 py-2 text-sm hover:bg-neutral-100 dark:hover:bg-neutral-800"
           >
             <LogIn className="h-4 w-4 text-neutral-500 dark:text-slate-400" />
             Enter workspace
-          </a>
+          </Link>
 
           <form action={resetAction}>
             <input type="hidden" name="tenant_id" value={tenant.id} />

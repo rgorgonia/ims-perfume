@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import {
   createStoreAction,
   updateStoreAction,
@@ -190,8 +190,8 @@ function StoreConfigFields({
       </legend>
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="space-y-1">
-          <label htmlFor={`${idPrefix}-biz`} className="text-xs font-medium text-neutral-600 dark:text-neutral-400">Business name (optional)</label>
-          <input id={`${idPrefix}-biz`} name="business_name" defaultValue={config?.business_name ?? ""} placeholder="Defaults to tenant-wide" className={inputCls} />
+          <label htmlFor={`${idPrefix}-biz`} className="text-xs font-medium text-neutral-600 dark:text-neutral-400">Business name</label>
+          <input id={`${idPrefix}-biz`} name="business_name" defaultValue={config?.business_name ?? ""} placeholder="Leave blank to fall back" className={inputCls} />
         </div>
         <div className="space-y-1">
           <label htmlFor={`${idPrefix}-cur`} className="text-xs font-medium text-neutral-600 dark:text-neutral-400">Currency symbol</label>
@@ -207,8 +207,8 @@ function StoreConfigFields({
         </div>
       </div>
       <p className="text-xs text-neutral-500 dark:text-slate-400">
-        These settings apply only while this store is selected in the store
-        switcher; blank fields fall back to the tenant-wide defaults.
+        Applies only to this store — other stores keep their own. Blank fields
+        fall back to the tenant-wide defaults.
       </p>
     </fieldset>
   );
@@ -331,12 +331,13 @@ export function StoreRow({
   );
 }
 
-/** Reusable category checkbox list for the create form. */
-export function NewStoreCategories({ taxonomy }: { taxonomy: Cat[] }) {
-  return <CategoryCheckboxes taxonomy={taxonomy} selected={null} />;
-}
-
-/** Full create-store form (client — wires useActionState feedback). */
+/**
+ * Full create-store form (client — wires useActionState feedback).
+ * Two steps: fill in the details, then review them in a confirmation modal
+ * before the store is actually created. Store configuration (business name,
+ * currency, size unit) is intentionally NOT part of creation — add it later
+ * via the Edit button on the store row so every store keeps its own config.
+ */
 export function CreateStoreForm({
   taxonomy,
   users,
@@ -350,8 +351,63 @@ export function CreateStoreForm({
   // Track the chosen tenant so the manager checkbox list only offers staff
   // that can actually be assigned (assignment is tenant-validated server-side).
   const [selectedTenant, setSelectedTenant] = useState<string | undefined>(tenants?.[0]?.id);
+  const formRef = useRef<HTMLFormElement>(null);
+  const [reviewing, setReviewing] = useState(false);
+  const [draft, setDraft] = useState<null | {
+    name: string;
+    address: string;
+    store_type: string;
+    tenant: string;
+    categories: string[];
+    managers: string[];
+  }>(null);
+
+  function openReview() {
+    const form = formRef.current;
+    if (!form) return;
+    if (!form.checkValidity()) {
+      form.reportValidity();
+      return;
+    }
+    const fd = new FormData(form);
+    setDraft({
+      name: String(fd.get("name") ?? "").trim(),
+      address: String(fd.get("address") ?? "").trim(),
+      store_type: String(fd.get("store_type") ?? "physical"),
+      tenant: String(fd.get("tenant_id") ?? "").trim() || (tenants?.[0]?.id ?? ""),
+      categories: fd.getAll("categories").map(String),
+      managers: fd.getAll("manager_users").map(String),
+    });
+    setReviewing(true);
+  }
+
+  function confirmCreate() {
+    formRef.current?.requestSubmit(); // submits the real form → createStoreAction
+  }
+
+  // Close the review modal once a store has been created successfully.
+  useEffect(() => {
+    if (state?.success) setReviewing(false);
+  }, [state?.success]);
+
+  const draftTypeLabel =
+    STORE_TYPES.find(([v]) => v === draft?.store_type)?.[1] ?? draft?.store_type ?? "";
+  const draftTenantName = tenants?.find((t) => t.id === draft?.tenant)?.name ?? "";
+  const draftManagerLabels = draft
+    ? users
+        .filter((u) => draft.managers.includes(u.id))
+        .map((u) => u.full_name)
+    : [];
+  const draftCatLabels = draft
+    ? draft.categories.length
+      ? draft.categories.map((c) => taxonomy.find((x) => x.slug === c)?.label ?? c)
+      : []
+    : [];
+
   return (
-    <form
+    <>
+      <form
+        ref={formRef}
       action={action}
       className="grid gap-3 rounded-2xl border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-transparent"
     >
@@ -384,17 +440,104 @@ export function CreateStoreForm({
       )}
       <StoreTypeAndManager users={users} tenantId={selectedTenant} />
       <CategoryCheckboxes taxonomy={taxonomy} selected={null} />
-      <StoreConfigFields idPrefix="sn" />
       <div className="flex flex-wrap items-center gap-3">
         <button
-          type="submit"
-          disabled={pending}
-          className="rounded-2xl btn-neon px-4 py-2 text-sm font-medium transition-opacity hover:opacity-80 disabled:opacity-50"
+          type="button"
+          onClick={openReview}
+          className="rounded-2xl btn-neon px-4 py-2 text-sm font-medium transition-opacity hover:opacity-80"
         >
-          {pending ? "Creating…" : "Create store"}
+          Review &amp; confirm store
         </button>
         <Msg state={state} />
       </div>
     </form>
+
+    {reviewing && draft && (
+      <div
+        className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-4 backdrop-blur-sm sm:items-center"
+        onClick={() => setReviewing(false)}
+      >
+        <div
+          className="w-full max-w-lg rounded-2xl border border-neutral-200 bg-white p-6 shadow-xl sm:rounded-3xl dark:border-neutral-800 dark:bg-[#17171a]"
+          onClick={(e) => e.stopPropagation()}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="create-review-title"
+        >
+          <div className="mb-4 flex items-start justify-between gap-3">
+            <div>
+              <h3 id="create-review-title" className="text-base font-semibold">
+                Review new store
+              </h3>
+              <p className="text-xs text-neutral-500 dark:text-slate-400">
+                Confirm these details before creating the store.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setReviewing(false)}
+              aria-label="Close review"
+              className="rounded-full p-1.5 text-neutral-500 hover:bg-black/[0.05] dark:text-slate-400 dark:hover:bg-white/10"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M18 6 6 18M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+
+          <dl className="divide-y divide-neutral-100 text-sm dark:divide-neutral-800">
+            <SummaryRow label="Store name" value={draft.name} />
+            <SummaryRow label="Address" value={draft.address || "None"} />
+            <SummaryRow label="Store type" value={draftTypeLabel} />
+            {tenants && tenants.length > 0 && (
+              <SummaryRow label="Tenant" value={draftTenantName || "—"} />
+            )}
+            <SummaryRow
+              label="Categories sold"
+              value={draftCatLabels.length ? draftCatLabels.join(", ") : "All (sells everything)"}
+            />
+            <SummaryRow
+              label="Assigned managers"
+              value={draftManagerLabels.length ? draftManagerLabels.join(", ") : "None"}
+            />
+          </dl>
+
+          <p className="mt-4 rounded-xl bg-neutral-100 px-3 py-2.5 text-xs text-neutral-500 dark:bg-white/5 dark:text-slate-400">
+            Store configuration (business name, currency, size unit) is set
+            later via <span className="font-medium">Edit</span> on the store&apos;s row — each
+            store keeps its own config.
+          </p>
+
+          <div className="mt-5 flex flex-wrap items-center justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => setReviewing(false)}
+              className="rounded-full border border-black/[0.08] px-4 py-2 text-sm font-medium text-neutral-600 hover:bg-black/[0.05] dark:border-white/10 dark:text-slate-300 dark:hover:bg-white/10"
+            >
+              Back
+            </button>
+            <button
+              type="button"
+              onClick={confirmCreate}
+              disabled={pending}
+              className="rounded-full btn-neon px-4 py-2 text-sm font-medium transition-opacity hover:opacity-80 disabled:opacity-50"
+            >
+              {pending ? "Creating…" : "Confirm &amp; create"}
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+  </>
+  );
+}
+
+/** Read-only detail row inside the review modal. */
+function SummaryRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-start justify-between gap-4 py-1.5">
+      <dt className="shrink-0 font-medium text-neutral-500 dark:text-slate-400">{label}</dt>
+      <dd className="text-right text-neutral-900 dark:text-white">{value}</dd>
+    </div>
   );
 }

@@ -101,10 +101,11 @@ export default async function StoresPage() {
         <section className="space-y-4">
           <h2 className="text-xl font-semibold">Add store</h2>
           <p className="text-sm text-neutral-500 dark:text-slate-400">
-            Pick the store type and categories it sells, configure its own
-            settings, then assign one owner and any number of inventory
-            managers. An owner sees that store&apos;s revenue &amp; capital;
-            inventory managers handle stock &amp; sales only.
+            Pick the store type and the categories it sells, then assign
+            inventory managers. After creating the store, add its own
+            configuration (business name, currency, size unit) any time via{" "}
+            <span className="font-medium">Edit</span> — every store keeps its
+            own config, separate from the others.
           </p>
           <CreateStoreForm taxonomy={cats} users={userOpts} tenants={tenants} />
         </section>
