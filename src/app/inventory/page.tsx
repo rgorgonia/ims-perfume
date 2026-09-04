@@ -8,6 +8,7 @@ import { getSettings } from "@/lib/settings";
 type Store = { id: string; name: string };
 type Variant = {
   id: string;
+  product_id: string;
   sku: string;
   size_ml: number;
   attributes?: Record<string, string | number | boolean> | null;
@@ -128,15 +129,11 @@ export default async function InventoryPage() {
       storesQuery,
       // Variant dropdown: only variants of the active store's products when a
       // store is selected, so Store B never sees Store A's catalog items.
-      (async () => {
-        let q = supabase
-          .from("variant_public_view")
-          .select("id, sku, size_ml, attributes, products(name, store_id)")
-          .order("sku")
-          .limit(200);
-        if (activeStoreId) q = q.eq("products.store_id", activeStoreId);
-        return q;
-      })(),
+      supabase
+        .from("variant_public_view")
+        .select("id, product_id, sku, size_ml, attributes, products(name)")
+        .order("sku")
+        .limit(200),
       supabase
         .from("inventory_levels")
         .select(
@@ -144,6 +141,19 @@ export default async function InventoryPage() {
         ),
     ]);
   for (const s of (stores ?? []) as { id: string }[]) storeIds.add(s.id);
+
+  // Store isolation for the variant dropdown: when a store is active, keep
+  // only variants whose product belongs to that store. Filtering is done by
+  // product_id (reliable on variant_public_view) against the store's products.
+  let scopedVariants = (variants ?? []) as unknown as Variant[];
+  if (activeStoreId) {
+    const { data: storeProducts } = await supabase
+      .from("products")
+      .select("id")
+      .eq("store_id", activeStoreId);
+    const ids = new Set((storeProducts ?? []).map((p) => p.id));
+    scopedVariants = scopedVariants.filter((v) => ids.has(v.product_id));
+  }
 
   // Aggregate batch-level rows to variant × store totals
   const totals = new Map<string, { name: string; productId: string | null; sku: string; store: string; qty: number }>();
@@ -203,7 +213,7 @@ export default async function InventoryPage() {
             <label htmlFor="inv-variant" className="text-xs font-medium text-neutral-600 dark:text-neutral-400">Product variant *</label>
             <select id="inv-variant" name="variant_id" required className={inputCls}>
               <option value="">Select variant</option>
-              {((variants ?? []) as unknown as Variant[]).map((v) => {
+              {scopedVariants.map((v) => {
                 const size =
                   v.size_ml ?? (v.attributes as Record<string, unknown> | null)?.size ?? null;
                 const sizePart = size != null ? ` (${size}${sizeUnit})` : "";

@@ -6,11 +6,12 @@ import type { SaleResult } from "./page";
 type StoreT = { id: string; name: string; categories: string[] | null };
 type VariantT = {
   id: string;
+  product_id: string;
   sku: string;
   size_ml: number;
   retail_price: number;
   attributes?: Record<string, string | number | boolean> | null;
-  products: { name: string; category: string | null; store_id?: string | null } | null;
+  products: { name: string; category: string | null } | null;
 };
 
 const inputCls =
@@ -48,10 +49,8 @@ export default function SaleForm({
       ? null
       : store.categories;
   let filtered = variants.filter((v) => {
-    // Store isolation: only variants of products that belong to the chosen
-    // store (or store-less products shared across the tenant).
-    const sid = v.products?.store_id;
-    if (sid && sid !== storeId) return false;
+    // The page has already scoped `variants` to the active store's products,
+    // so here we only respect the store's category allowlist.
     const cat = v.products?.category;
     return allowed ? (cat ? allowed.includes(cat) : false) : true;
   });

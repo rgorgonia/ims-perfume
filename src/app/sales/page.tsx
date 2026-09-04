@@ -9,6 +9,7 @@ import SaleForm from "./sale-form";
 type Store = { id: string; name: string; categories: string[] | null };
 type Variant = {
   id: string;
+  product_id: string;
   sku: string;
   size_ml: number;
   retail_price: number;
@@ -103,7 +104,7 @@ export default async function SalesPage() {
       : supabase.from("stores").select("id, name, categories").order("name"),
     supabase
       .from("variant_public_view")
-      .select("id, sku, size_ml, retail_price, attributes, products(name, category, store_id)")
+      .select("id, product_id, sku, size_ml, retail_price, attributes, products(name, category)")
       .order("sku")
       .limit(200),
     (() => {
@@ -134,6 +135,19 @@ export default async function SalesPage() {
       Number(row.quantity_on_hand);
   }
 
+  // Store isolation for the variant dropdown: when a store is active, only
+  // variants of products that belong to that store may be sold there. Filter
+  // by product_id (reliable on variant_public_view) against the store's set.
+  let visibleVariants = (variants ?? []) as unknown as Variant[];
+  if (activeStoreId) {
+    const { data: storeProducts } = await supabase
+      .from("products")
+      .select("id")
+      .eq("store_id", activeStoreId);
+    const ids = new Set((storeProducts ?? []).map((p) => p.id));
+    visibleVariants = visibleVariants.filter((v) => ids.has(v.product_id));
+  }
+
   return (
     <div className="mx-auto max-w-5xl space-y-8 py-6 sm:py-8">
       <section className="space-y-4">
@@ -158,7 +172,7 @@ export default async function SalesPage() {
           stores={((stores ?? []) as unknown as Store[]).filter(
             (s) => !activeStoreId || s.id === activeStoreId
           )}
-          variants={(variants ?? []) as unknown as Variant[]}
+          variants={visibleVariants}
           availability={availability}
           sizeUnit={sizeUnit}
           currencySymbol={currencySymbol}
