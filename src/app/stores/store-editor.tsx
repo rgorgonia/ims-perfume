@@ -25,6 +25,12 @@ type StoreT = {
   categories: string[] | null;
   store_type: string;
   tenant_id: string;
+  config?: {
+    business_name: string | null;
+    currency_symbol: string | null;
+    currency_locale: string | null;
+    size_unit: string | null;
+  } | null;
 };
 
 const STORE_TYPES: [string, string][] = [
@@ -166,6 +172,48 @@ function Msg({ state }: { state: StoreActionState }) {
   );
 }
 
+/** Per-store configuration fields — stored on the store's own settings row. */
+function StoreConfigFields({
+  config,
+  idPrefix,
+}: {
+  config?: StoreT["config"];
+  idPrefix: string;
+}) {
+  return (
+    <fieldset className="space-y-2 rounded-2xl border border-neutral-200 p-3 dark:border-neutral-800">
+      <legend className="text-xs font-medium px-1">
+        Configuration{" "}
+        <span className="font-normal text-neutral-500">
+          — exclusive to this store
+        </span>
+      </legend>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div className="space-y-1">
+          <label htmlFor={`${idPrefix}-biz`} className="text-xs font-medium text-neutral-600 dark:text-neutral-400">Business name (optional)</label>
+          <input id={`${idPrefix}-biz`} name="business_name" defaultValue={config?.business_name ?? ""} placeholder="Defaults to tenant-wide" className={inputCls} />
+        </div>
+        <div className="space-y-1">
+          <label htmlFor={`${idPrefix}-cur`} className="text-xs font-medium text-neutral-600 dark:text-neutral-400">Currency symbol</label>
+          <input id={`${idPrefix}-cur`} name="currency_symbol" defaultValue={config?.currency_symbol ?? ""} placeholder="e.g. ₱, $" className={inputCls} />
+        </div>
+        <div className="space-y-1">
+          <label htmlFor={`${idPrefix}-loc`} className="text-xs font-medium text-neutral-600 dark:text-neutral-400">Currency locale</label>
+          <input id={`${idPrefix}-loc`} name="currency_locale" defaultValue={config?.currency_locale ?? ""} placeholder="e.g. en-PH" className={inputCls} />
+        </div>
+        <div className="space-y-1">
+          <label htmlFor={`${idPrefix}-unit`} className="text-xs font-medium text-neutral-600 dark:text-neutral-400">Size unit</label>
+          <input id={`${idPrefix}-unit`} name="size_unit" defaultValue={config?.size_unit ?? ""} placeholder="e.g. ml" className={inputCls} />
+        </div>
+      </div>
+      <p className="text-xs text-neutral-500 dark:text-slate-400">
+        These settings apply only while this store is selected in the store
+        switcher; blank fields fall back to the tenant-wide defaults.
+      </p>
+    </fieldset>
+  );
+}
+
 /** One store row: inline edit form + two-click delete. */
 export function StoreRow({
   store,
@@ -208,6 +256,7 @@ export function StoreRow({
           tenantId={store.tenant_id}
         />
         <CategoryCheckboxes taxonomy={taxonomy} selected={store.categories} />
+        <StoreConfigFields config={store.config} idPrefix={`se-${store.id}`} />
         <label className="flex items-center gap-2 text-sm font-medium">
           <input
             type="checkbox"
@@ -335,6 +384,7 @@ export function CreateStoreForm({
       )}
       <StoreTypeAndManager users={users} tenantId={selectedTenant} />
       <CategoryCheckboxes taxonomy={taxonomy} selected={null} />
+      <StoreConfigFields idPrefix="sn" />
       <div className="flex flex-wrap items-center gap-3">
         <button
           type="submit"

@@ -35,7 +35,7 @@ const NAV_ITEMS: Item[] = [
   { href: "/sales", label: "Sales", icon: ShoppingCart },
   { href: "/inventory", label: "Inventory", icon: Boxes },
   { href: "/products", label: "Products", icon: Package },
-  { href: "/stores", label: "Stores & Config", admin: true, icon: Store },
+  { href: "/stores", label: "Stores", admin: true, icon: Store },
   { href: "/users", label: "Users", admin: true, icon: Users },
   { href: "/capital", label: "Capital", admin: true, icon: Wallet },
   { href: "/settings", label: "Settings", icon: Settings },
@@ -58,7 +58,7 @@ export default function AppShell({
   roleLabel,
   tenantName,
   storeName,
-  businessName,
+  activeStoreName,
   avatarUrl,
   stores,
   activeStoreId,
@@ -70,7 +70,7 @@ export default function AppShell({
   roleLabel: string;
   tenantName: string | null;
   storeName: string | null;
-  businessName: string;
+  activeStoreName: string | null;
   avatarUrl: string | null;
   stores: { id: string; name: string }[];
   activeStoreId: string | null;
@@ -107,9 +107,9 @@ export default function AppShell({
     (i) => !MOBILE_PRIMARY.some((m) => m.href === i.href),
   );
   const initials = email.slice(0, 2).toUpperCase();
-  // Sidebar/header title: the user's assigned store when they have one,
-  // otherwise the business (tenant) name.
-  const headerTitle = storeName || businessName;
+  // Sidebar/header title: the globally selected store when one is active
+  // (updates instantly with the switcher), otherwise "My Business".
+  const headerTitle = activeStoreName || storeName || "My Business";
 
   return (
     <div className="min-h-dvh">

@@ -13,6 +13,44 @@ function parseCategories(formData: FormData): string[] | null {
   return categories.length ? categories : null;
 }
 
+/** Per-store configuration from the shared StoreConfigFields fieldset. */
+function parseStoreConfig(formData: FormData) {
+  return {
+    business_name: String(formData.get("business_name") ?? "").trim() || null,
+    currency_symbol: String(formData.get("currency_symbol") ?? "").trim() || null,
+    currency_locale: String(formData.get("currency_locale") ?? "").trim() || null,
+    size_unit: String(formData.get("size_unit") ?? "").trim() || null,
+  };
+}
+
+function hasConfigValue(c: ReturnType<typeof parseStoreConfig>): boolean {
+  return Object.values(c).some((v) => v !== null);
+}
+
+/**
+ * Write the store's own isolated config row (tenant_settings keyed by
+ * store_id). Blank fields keep the tenant-wide fallback (NULLs).
+ */
+async function saveStoreConfig(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  tenantId: string,
+  storeId: string,
+  formData: FormData
+): Promise<string | null> {
+  const config = parseStoreConfig(formData);
+  if (!hasConfigValue(config)) return null;
+  try {
+    const { error } = await supabase.from("tenant_settings").upsert(
+      { tenant_id: tenantId, store_id: storeId, ...config },
+      { onConflict: "tenant_id,store_id" }
+    );
+    if (error) throw new Error(error.message);
+    return null;
+  } catch (e) {
+    return e instanceof Error ? e.message : "Failed to save store configuration";
+  }
+}
+
 function parseStoreType(formData: FormData): string {
   const t = String(formData.get("store_type") ?? "physical");
   return (STORE_TYPES as readonly string[]).includes(t) ? t : "physical";
@@ -114,6 +152,11 @@ export async function createStoreAction(
     return { success: `Store "${name}" created, but assignment failed: ${assignError}` };
   }
 
+  const configError = await saveStoreConfig(supabase, tenantId, store.id, formData);
+  if (configError) {
+    return { success: `Store "${name}" created, but configuration failed: ${configError}` };
+  }
+
   revalidatePath("/stores");
   revalidatePath("/users");
   return { success: `Store "${name}" created` };
@@ -167,6 +210,11 @@ export async function updateStoreAction(
   );
   if (assignError) {
     return { success: `Store "${name}" updated, but assignment failed: ${assignError}` };
+  }
+
+  const configError = await saveStoreConfig(supabase, storeTenantId, id, formData);
+  if (configError) {
+    return { success: `Store "${name}" updated, but configuration failed: ${configError}` };
   }
 
   revalidatePath("/stores");

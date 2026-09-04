@@ -75,6 +75,10 @@ export default async function RootLayout({
     stores = await getAccessibleStores(session, supabase);
     activeStoreId = await getActiveStore(stores);
   }
+  // Sidebar title mirrors the globally selected store; falls back to
+  // "My Business" when no store is selected (or on initial load).
+  const activeStoreName =
+    stores.find((s) => s.id === activeStoreId)?.name ?? null;
 
   // Settings reflect the active store's own config when one is selected.
   const settings = await getSettings(session?.tenant_id ?? null, activeStoreId);
@@ -102,7 +106,7 @@ export default async function RootLayout({
             roleLabel={roleLabel}
             tenantName={tenantName}
             storeName={storeName}
-            businessName={settings.businessName}
+            activeStoreName={activeStoreName}
             avatarUrl={session.profile?.avatar_url ?? null}
             stores={stores}
             activeStoreId={activeStoreId}
