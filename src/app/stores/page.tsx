@@ -2,7 +2,6 @@ import { requirePrivileged } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { getTaxonomy } from "@/lib/services/taxonomy";
 import { StoreRow, CreateStoreForm } from "./store-editor";
-import TaxonomyManager from "@/app/admin/config/taxonomy-manager";
 
 type StoreConfig = {
   business_name: string | null;
@@ -94,7 +93,8 @@ export default async function StoresPage() {
         <p className="text-sm text-neutral-500 dark:text-slate-400">
           Create and edit stores — each store carries its own configuration
           (business name, currency, size unit) that never mixes with another
-          store&apos;s. Manage the product taxonomy below.
+          store&apos;s. The shared product taxonomy is managed under{" "}
+          <span className="font-medium">Taxonomy</span> in the menu.
         </p>
       </header>
       <div className="space-y-8">
@@ -122,14 +122,6 @@ export default async function StoresPage() {
               </p>
             )}
           </div>
-        </section>
-
-        <section className="space-y-3">
-          <h2 className="text-xl font-semibold">Product taxonomy</h2>
-          <p className="text-sm text-neutral-500 dark:text-slate-400">
-            Product categories and their attribute fields, shared across stores.
-          </p>
-          <TaxonomyManager taxonomy={taxonomy} />
         </section>
       </div>
     </div>
