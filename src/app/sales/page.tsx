@@ -103,7 +103,7 @@ export default async function SalesPage() {
       : supabase.from("stores").select("id, name, categories").order("name"),
     supabase
       .from("variant_public_view")
-      .select("id, sku, size_ml, retail_price, attributes, products(name, category)")
+      .select("id, sku, size_ml, retail_price, attributes, products(name, category, store_id)")
       .order("sku")
       .limit(200),
     (() => {

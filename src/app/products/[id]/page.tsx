@@ -38,11 +38,13 @@ async function addVariant(formData: FormData) {
   const supabase = await createClient();
   const { data: product } = await supabase
     .from("products")
-    .select("category")
+    .select("category, store_id")
     .eq("id", productId)
     .single();
 
-  const taxonomy = await getTaxonomy(session.tenant_id);
+  // Scope the attribute fields to the product's own store (or the shared
+  // taxonomy when the product isn't tied to a single store).
+  const taxonomy = await getTaxonomy(session.tenant_id, product?.store_id ?? null);
   const attributes = parseVariantAttributes(
     formData,
     taxonomy,
@@ -123,15 +125,17 @@ export default async function ProductPage({
   const { id } = await params;
   const session = await requireUser();
   const supabase = await createClient();
-  const [{ currencySymbol, currencyLocale, sizeUnit }, taxonomy, { data: product }, { data: variants }] =
+  const [{ currencySymbol, currencyLocale, sizeUnit }, { data: product }, { data: variants }] =
     await Promise.all([
       getSettings(session.tenant_id),
-      getTaxonomy(session.tenant_id),
       supabase.from("products").select("*").eq("id", id).single(),
       supabase.from("variant_public_view").select("*").eq("product_id", id),
     ]);
   const money = (n: number) => formatMoney(n, currencySymbol, currencyLocale);
   if (!product) notFound();
+  // Attribute fields on the add-variant form follow the product's own store
+  // taxonomy (or the shared one when the product isn't store-tied).
+  const taxonomy = await getTaxonomy(session.tenant_id, product.store_id ?? null);
   const variantList = (variants ?? []) as unknown as Variant[];
 
   const [{ data: notes }, { data: batches }] = await Promise.all([

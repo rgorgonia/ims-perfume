@@ -126,11 +126,17 @@ export default async function InventoryPage() {
   const [{ data: stores }, { data: variants }, { data: levels }] =
     await Promise.all([
       storesQuery,
-      supabase
-        .from("variant_public_view")
-        .select("id, sku, size_ml, attributes, products(name)")
-        .order("sku")
-        .limit(200),
+      // Variant dropdown: only variants of the active store's products when a
+      // store is selected, so Store B never sees Store A's catalog items.
+      (async () => {
+        let q = supabase
+          .from("variant_public_view")
+          .select("id, sku, size_ml, attributes, products(name, store_id)")
+          .order("sku")
+          .limit(200);
+        if (activeStoreId) q = q.eq("products.store_id", activeStoreId);
+        return q;
+      })(),
       supabase
         .from("inventory_levels")
         .select(
@@ -182,7 +188,7 @@ export default async function InventoryPage() {
         >
           <div className="space-y-1">
             <label htmlFor="inv-store" className="text-xs font-medium text-neutral-600 dark:text-neutral-400">Store *</label>
-            <select id="inv-store" name="store_id" required className={inputCls}>
+            <select id="inv-store" name="store_id" required defaultValue={activeStoreId ?? ""} className={inputCls}>
               {((stores ?? []) as Store[]).filter((s: Store) => !activeStoreId || s.id === activeStoreId).length > 1 && (
                 <option value="">Select store</option>
               )}

@@ -68,6 +68,7 @@ export async function addAttributeDefinitionAction(
     .insert({
       category_id: categoryId,
       tenant_id: tenantId,
+      store_id: String(formData.get("store_id") ?? "").trim() || null,
       attribute_key: attributeKey,
       label,
       input_type: inputType,
@@ -209,9 +210,13 @@ export async function addCategoryAction(
     .replace(/^-|-$/g, "");
   if (!slug) return { error: "Category label must contain letters or numbers" };
 
+  // Optional store scope: hidden input set by the Taxonomy page when a
+  // specific store is selected (store-owned taxonomy instead of shared).
+  const storeId = String(formData.get("store_id") ?? "").trim() || null;
+
   const { data: cat, error } = await supabase
     .from("product_categories")
-    .insert({ slug, label, tenant_id: tenantId })
+    .insert({ slug, label, tenant_id: tenantId, store_id: storeId })
     .select("id")
     .single();
 
@@ -224,6 +229,7 @@ export async function addCategoryAction(
     {
       category_id: cat.id,
       tenant_id: tenantId,
+      store_id: storeId,
       attribute_key: "notes",
       label: "Notes",
       input_type: "text",
@@ -236,6 +242,7 @@ export async function addCategoryAction(
     defs.unshift({
       category_id: cat.id,
       tenant_id: tenantId,
+      store_id: storeId,
       attribute_key: "concentration",
       label: "Concentration",
       input_type: "select",
@@ -246,6 +253,7 @@ export async function addCategoryAction(
     defs.push({
       category_id: cat.id,
       tenant_id: tenantId,
+      store_id: storeId,
       attribute_key: "scent_family",
       label: "Scent family",
       input_type: "select",

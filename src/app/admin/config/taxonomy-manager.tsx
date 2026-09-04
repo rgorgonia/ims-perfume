@@ -159,7 +159,13 @@ function CategoryRow({ category }: { category: Category }) {
 /* Main manager                                                        */
 /* ------------------------------------------------------------------ */
 
-export default function TaxonomyManager({ taxonomy }: { taxonomy: Taxonomy }) {
+export default function TaxonomyManager({
+  taxonomy,
+  storeId,
+}: {
+  taxonomy: Taxonomy;
+  storeId?: string | null;
+}) {
   const [addCat, addCatAction, addCatPending] = useActionState(
     addCategoryAction,
     EMPTY
@@ -202,6 +208,7 @@ export default function TaxonomyManager({ taxonomy }: { taxonomy: Taxonomy }) {
         </div>
 
         <form action={addCatAction} className="grid min-w-0 gap-2 sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_auto] sm:items-end">
+          {storeId && <input type="hidden" name="store_id" value={storeId} />}
           <div className="space-y-0.5">
             <label htmlFor="new_cat_label" className="text-xs font-medium">
               Category label
@@ -282,6 +289,7 @@ export default function TaxonomyManager({ taxonomy }: { taxonomy: Taxonomy }) {
           action={addDefAction}
           className="grid min-w-0 gap-3 rounded-2xl border border-neutral-200 p-4 [&>div]:min-w-0 sm:grid-cols-2 dark:border-neutral-800"
         >
+          {storeId && <input type="hidden" name="store_id" value={storeId} />}
           <div className="space-y-1">
             <label htmlFor="def_category" className="text-sm font-medium">
               Category

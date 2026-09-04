@@ -10,7 +10,7 @@ type VariantT = {
   size_ml: number;
   retail_price: number;
   attributes?: Record<string, string | number | boolean> | null;
-  products: { name: string; category: string | null } | null;
+  products: { name: string; category: string | null; store_id?: string | null } | null;
 };
 
 const inputCls =
@@ -47,12 +47,14 @@ export default function SaleForm({
     !store?.categories || store.categories.length === 0
       ? null
       : store.categories;
-  let filtered = allowed
-    ? variants.filter((v) => {
-        const cat = v.products?.category;
-        return cat ? allowed.includes(cat) : false;
-      })
-    : variants;
+  let filtered = variants.filter((v) => {
+    // Store isolation: only variants of products that belong to the chosen
+    // store (or store-less products shared across the tenant).
+    const sid = v.products?.store_id;
+    if (sid && sid !== storeId) return false;
+    const cat = v.products?.category;
+    return allowed ? (cat ? allowed.includes(cat) : false) : true;
+  });
 
   const availFor = (v: VariantT) => availability[v.id]?.[storeId] ?? 0;
 

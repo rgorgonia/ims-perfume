@@ -59,37 +59,48 @@ function parseTaxonomy(
 }
 
 /**
- * Read the tenant's taxonomy. Categories & attribute definitions are
- * tenant-owned and RLS-scoped, so this uses the authenticated server client.
- * React cache() dedupes per request (never globally cached across tenants).
+ * Read the taxonomy visible in a given scope.
+ *  - `storeId` set     → that store's OWN rows only (store-owned taxonomy).
+ *  - `storeId` omitted → the tenant-wide shared rows (store_id IS NULL).
+ * Store B therefore never sees Store A's categories/attributes unless they
+ * were explicitly imported into B. React cache() dedupes per request.
  */
-export const getTaxonomy = cache(async (tenantId?: string | null): Promise<Taxonomy> => {
-  const supabase = await createServerClient();
-  const t = tenantId ?? undefined;
+export const getTaxonomy = cache(
+  async (tenantId?: string | null, storeId?: string | null): Promise<Taxonomy> => {
+    const supabase = await createServerClient();
+    const t = tenantId ?? undefined;
 
-  const query = supabase
-    .from("product_categories")
-    .select("id, slug, label, sort_order, is_active")
-    .eq("is_active", true);
-  const q2 = supabase
-    .from("category_attribute_definitions")
-    .select("id, category_id, attribute_key, label, input_type, options, required, sort_order")
-    .order("sort_order");
+    const query = supabase
+      .from("product_categories")
+      .select("id, slug, label, sort_order, is_active")
+      .eq("is_active", true);
+    const q2 = supabase
+      .from("category_attribute_definitions")
+      .select("id, category_id, attribute_key, label, input_type, options, required, sort_order")
+      .order("sort_order");
 
-  if (t) {
-    query.eq("tenant_id", t);
-    q2.eq("tenant_id", t);
+    if (t) {
+      query.eq("tenant_id", t);
+      q2.eq("tenant_id", t);
+    }
+    if (storeId) {
+      query.eq("store_id", storeId);
+      q2.eq("store_id", storeId);
+    } else {
+      query.is("store_id", null);
+      q2.is("store_id", null);
+    }
+
+    const [catsR, defsR] = await Promise.all([query, q2]);
+    if (catsR.error) throw catsR.error;
+    if (defsR.error) throw defsR.error;
+
+    return parseTaxonomy(
+      (catsR.data ?? []) as Category[],
+      (defsR.data ?? []) as CategoryAttributeDefinition[]
+    );
   }
-
-  const [catsR, defsR] = await Promise.all([query, q2]);
-  if (catsR.error) throw catsR.error;
-  if (defsR.error) throw defsR.error;
-
-  return parseTaxonomy(
-    (catsR.data ?? []) as Category[],
-    (defsR.data ?? []) as CategoryAttributeDefinition[]
-  );
-});
+);
 
 export const getGlobalConfig = cache(async (): Promise<GlobalConfig> => {
   const supabase = await createServerClient();

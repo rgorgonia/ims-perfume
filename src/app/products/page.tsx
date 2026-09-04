@@ -52,8 +52,9 @@ async function createProduct(
   if (!name || !sku)
     return { error: "Product name and SKU are required." };
 
-  // Dynamic attributes from the taxonomy-generated fields (JSONB on the variant).
-  const taxonomy = await getTaxonomy(session.tenant_id);
+  // Dynamic attributes from the taxonomy-generated fields (JSONB on the
+  // variant), scoped to the store the product will belong to.
+  const taxonomy = await getTaxonomy(session.tenant_id, storeId);
   const attributes = parseVariantAttributes(formData, taxonomy, category);
 
   // ONE atomic RPC (migration 013): product + first variant in a single
@@ -102,7 +103,7 @@ export default async function ProductsPage({
     { data: inventory },
   ] = await Promise.all([
     getSettings(session.tenant_id, activeStoreId),
-    getTaxonomy(session.tenant_id),
+    getTaxonomy(session.tenant_id, activeStoreId),
     (() => {
       // Catalog isolation: a selected store shows only its own products; "All
       // stores" shows every product across the caller's stores.
