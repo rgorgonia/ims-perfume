@@ -44,13 +44,12 @@ async function createProduct(
   const brand = String(formData.get("brand") ?? "").trim();
   const category = String(formData.get("category") ?? "").trim();
   const retailPrice = Number(formData.get("retail_price") ?? 0);
-  const sizeMl = Number(formData.get("size_ml") ?? 0);
   const sku = String(formData.get("sku") ?? "").trim();
   const isPrivileged = session.isPlatformAdmin || session.isTenantOwner;
   const costPrice = isPrivileged ? Number(formData.get("cost_price") ?? 0) : 0;
 
-  if (!name || !sku || !sizeMl)
-    return { error: "Product name, SKU and size are required." };
+  if (!name || !sku)
+    return { error: "Product name and SKU are required." };
 
   // Dynamic attributes from the taxonomy-generated fields (JSONB on the variant).
   const taxonomy = await getTaxonomy(session.tenant_id);
@@ -67,7 +66,7 @@ async function createProduct(
       p_category: category || null,
       p_attributes: attributes,
       p_sku: sku,
-      p_size_ml: sizeMl,
+      p_size_ml: null, // size is carried in attributes; derived by the RPC
       p_retail_price: retailPrice,
       p_cost_price: isPrivileged ? costPrice : null,
       p_store_id: storeId,
@@ -161,7 +160,6 @@ export default async function ProductsPage({
         <AddProductForm
           action={createProduct}
           taxonomy={taxonomy}
-          sizeUnit={sizeUnit}
           isAdmin={isPrivileged}
           activeStoreId={activeStoreId}
         />

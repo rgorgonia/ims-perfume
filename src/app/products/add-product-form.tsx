@@ -15,13 +15,11 @@ const inputCls =
 export default function AddProductForm({
   action,
   taxonomy,
-  sizeUnit,
   isAdmin,
   activeStoreId,
 }: {
   action: (prev: ProductResult, formData: FormData) => Promise<ProductResult>;
   taxonomy: Taxonomy;
-  sizeUnit: string;
   isAdmin: boolean;
   activeStoreId: string | null;
 }) {
@@ -65,18 +63,6 @@ export default function AddProductForm({
           name="sku"
           required
           placeholder="SKU for first variant *"
-          className={inputCls}
-        />
-      </div>
-      <div className="space-y-1">
-        <label htmlFor="pf-size" className="text-xs font-medium text-neutral-600 dark:text-neutral-400">Size ({sizeUnit}) *</label>
-        <input
-          id="pf-size"
-          name="size_ml"
-          required
-          type="number"
-          min="1"
-          placeholder={`Size (${sizeUnit}) *`}
           className={inputCls}
         />
       </div>

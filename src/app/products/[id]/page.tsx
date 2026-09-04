@@ -30,11 +30,10 @@ async function addVariant(formData: FormData) {
   const session = await requirePrivileged();
   const productId = String(formData.get("product_id") ?? "");
   const sku = String(formData.get("sku") ?? "").trim();
-  const sizeMl = Number(formData.get("size_ml") ?? 0);
   const variantType = String(formData.get("variant_type") ?? "retail");
   const retailPrice = Number(formData.get("retail_price") ?? 0);
   const threshold = Number(formData.get("low_stock_threshold") ?? 5);
-  if (!productId || !sku || !sizeMl) return;
+  if (!productId || !sku) return;
 
   const supabase = await createClient();
   const { data: product } = await supabase
@@ -49,12 +48,15 @@ async function addVariant(formData: FormData) {
     taxonomy,
     product?.category ?? ""
   );
+  // Size is taxonomy-driven (attributes.size); mirrored to the legacy
+  // size_ml column when numeric so older reports keep working.
+  const size = attributes.size;
 
   const { error } = await supabase.from("product_variants").insert({
     product_id: productId,
     tenant_id: session.tenant_id,
     sku,
-    size_ml: sizeMl,
+    size_ml: typeof size === "number" ? size : null,
     variant_type: variantType,
     retail_price: retailPrice,
     low_stock_threshold: threshold || 5,
@@ -67,9 +69,9 @@ async function addNote(formData: FormData) {
   "use server";
   const session = await requirePrivileged();
   const productId = String(formData.get("product_id") ?? "");
-  const noteType = String(formData.get("note_type") ?? "top");
+  const noteType = String(formData.get("note_type") ?? "").trim();
   const noteName = String(formData.get("note_name") ?? "").trim().toLowerCase();
-  if (!productId || !noteName) return;
+  if (!productId || !noteType || !noteName) return;
 
   const supabase = await createClient();
   await supabase.from("product_notes").upsert({
@@ -142,12 +144,17 @@ export default async function ProductPage({
 
   const inputCls =
     "rounded-[10px] border border-black/10 px-3 py-2 text-sm dark:border-neutral-700 dark:bg-transparent";
-  const noteTypes: [string, string][] = [
-    ["top", "Top notes"],
-    ["heart", "Heart notes"],
-    ["base", "Base notes"],
-  ];
   const noteList = (notes ?? []) as unknown as Note[];
+  // Note/tag groups are free-form: any group label already in use, so
+  // non-perfume categories can tag items too (e.g. "scent", "material").
+  const noteTypes = Array.from(
+    new Set([
+      ...noteList.map((n) => n.note_type),
+      "top",
+      "heart",
+      "base",
+    ])
+  );
   const batchList = (batches ?? []) as unknown as Batch[];
 
   return (
@@ -199,13 +206,14 @@ export default async function ProductPage({
         <form action={addVariant} className="grid gap-3 rounded-2xl border border-neutral-200 bg-white dark:bg-transparent p-4 sm:grid-cols-3 dark:border-neutral-800">
           <input type="hidden" name="product_id" value={id} />
           <input name="sku" required placeholder="SKU *" className={inputCls} />
-          <input name="size_ml" required type="number" min="1" placeholder={`Size (${sizeUnit}) *`} className={inputCls} />
-          <select name="variant_type" className={inputCls}>
-            <option value="retail">Retail</option>
-            <option value="tester">Tester</option>
-            <option value="sample">Sample</option>
-            <option value="gift_set">Gift set</option>
-          </select>
+          <input name="variant_type" list="variant-types" defaultValue="retail" placeholder="Variant type" className={inputCls} />
+          <datalist id="variant-types">
+            <option value="retail" />
+            <option value="tester" />
+            <option value="sample" />
+            <option value="bundle" />
+            <option value="gift_set" />
+          </datalist>
           <input name="retail_price" type="number" step="0.01" min="0" placeholder="Retail price" className={inputCls} />
           <input name="low_stock_threshold" type="number" min="0" placeholder="Low-stock threshold" className={inputCls} />
           <CategoryAttributeFields taxonomy={taxonomy} initialCategory={product.category ?? ""} />
@@ -218,13 +226,14 @@ export default async function ProductPage({
       {(product.category === "fragrance" ||
         (taxonomy.attributesByCategory[product.category ?? ""] ?? []).some(
           (d) => d.attribute_key.includes("note")
-        )) && (
+        ) ||
+        noteList.length > 0) && (
       <section className="space-y-3">
         <h2 className="text-lg font-semibold">Notes &amp; tags</h2>
         <div className="grid gap-3 sm:grid-cols-3">
-          {noteTypes.map(([type, label]) => (
+          {noteTypes.map((type) => (
             <div key={type} className="rounded-2xl border border-neutral-200 bg-white dark:bg-transparent p-4 dark:border-neutral-800">
-              <p className="mb-2 text-sm font-medium">{label}</p>
+              <p className="mb-2 text-sm font-medium capitalize">{type}</p>
               <div className="flex flex-wrap gap-2">
                 {noteList.filter((n) => n.note_type === type).map((n) => (
                   <form key={n.id} action={removeNote} className="contents">
@@ -248,11 +257,12 @@ export default async function ProductPage({
         </div>
         <form action={addNote} className="flex gap-3">
           <input type="hidden" name="product_id" value={id} />
-          <select name="note_type" className={inputCls}>
-            <option value="top">Top</option>
-            <option value="heart">Heart</option>
-            <option value="base">Base</option>
-          </select>
+          <input name="note_type" list="note-types" required placeholder="Group (e.g. top)" className={inputCls} />
+          <datalist id="note-types">
+            {noteTypes.map((t) => (
+              <option key={t} value={t} />
+            ))}
+          </datalist>
           <input name="note_name" required placeholder="e.g. bergamot" className={`${inputCls} flex-1`} />
           <button type="submit" className="rounded-2xl btn-neon px-4 py-2 text-sm font-medium hover:opacity-80">
             Add note
