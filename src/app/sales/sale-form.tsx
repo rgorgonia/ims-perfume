@@ -9,6 +9,7 @@ type VariantT = {
   sku: string;
   size_ml: number;
   retail_price: number;
+  attributes?: Record<string, string | number | boolean> | null;
   products: { name: string; category: string | null } | null;
 };
 
@@ -117,10 +118,13 @@ export default function SaleForm({
         <option value="">Select product variant *</option>
         {filtered.map((v) => {
           const a = availFor(v);
+          const size =
+            v.size_ml ?? (v.attributes as Record<string, unknown> | null)?.size ?? null;
+          const sizePart = size != null ? ` (${size}${sizeUnit})` : "";
           return (
             <option key={v.id} value={v.id} disabled={a < 1}>
-              {v.products?.name} — {v.sku} ({v.size_ml}
-              {sizeUnit}) — {currencySymbol}
+              {v.products?.name} — {v.sku}
+              {sizePart} — {currencySymbol}
               {Number(v.retail_price).toFixed(2)} · {a} available
             </option>
           );

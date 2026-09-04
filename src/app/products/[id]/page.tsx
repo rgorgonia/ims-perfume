@@ -182,7 +182,8 @@ export default async function ProductPage({
             <li key={v.id} className="flex items-center justify-between gap-3">
               <span>
                 <Link href="/inventory" className="hover:underline">
-                  {v.sku} — {v.size_ml}{sizeUnit} {v.variant_type}
+                  {v.sku}
+                  {v.size_ml != null ? ` — ${v.size_ml}${sizeUnit}` : ""} {v.variant_type}
                 </Link>
                 {v.attributes &&
                   Object.entries(v.attributes).length > 0 && (

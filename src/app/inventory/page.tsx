@@ -10,6 +10,7 @@ type Variant = {
   id: string;
   sku: string;
   size_ml: number;
+  attributes?: Record<string, string | number | boolean> | null;
   products: { name: string } | null;
 };
 type Level = {
@@ -127,7 +128,7 @@ export default async function InventoryPage() {
       storesQuery,
       supabase
         .from("variant_public_view")
-        .select("id, sku, size_ml, products(name)")
+        .select("id, sku, size_ml, attributes, products(name)")
         .order("sku")
         .limit(200),
       supabase
@@ -196,12 +197,17 @@ export default async function InventoryPage() {
             <label htmlFor="inv-variant" className="text-xs font-medium text-neutral-600 dark:text-neutral-400">Product variant *</label>
             <select id="inv-variant" name="variant_id" required className={inputCls}>
               <option value="">Select variant</option>
-              {((variants ?? []) as unknown as Variant[]).map((v) => (
-                <option key={v.id} value={v.id}>
-                  {v.products?.name} — {v.sku} ({v.size_ml}
-                  {sizeUnit})
-                </option>
-              ))}
+              {((variants ?? []) as unknown as Variant[]).map((v) => {
+                const size =
+                  v.size_ml ?? (v.attributes as Record<string, unknown> | null)?.size ?? null;
+                const sizePart = size != null ? ` (${size}${sizeUnit})` : "";
+                return (
+                  <option key={v.id} value={v.id}>
+                    {v.products?.name} — {v.sku}
+                    {sizePart}
+                  </option>
+                );
+              })}
             </select>
           </div>
           <div className="space-y-1">

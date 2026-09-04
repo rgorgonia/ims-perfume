@@ -7,6 +7,7 @@ import { getTaxonomy } from "@/lib/services/taxonomy";
 import { getAccessibleStores, getActiveStore } from "@/lib/store-scope";
 import { parseVariantAttributes } from "@/lib/attributes";
 import AddProductForm from "./add-product-form";
+import EditProductModal from "./edit-product-modal";
 
 type Variant = {
   id: string;
@@ -199,6 +200,27 @@ export default async function ProductsPage({
                       <Link href={`/products/${p.id}`} className="hover:underline">
                         {p.name}
                       </Link>
+                      {!p.is_active && (
+                        <span className="ml-2 inline-flex items-center rounded-full bg-neutral-200 px-2 py-0.5 text-[10px] font-semibold text-neutral-600 dark:bg-neutral-800 dark:text-slate-300">
+                          inactive
+                        </span>
+                      )}
+                      <div className="mt-0.5">
+                        <EditProductModal
+                          product={{
+                            id: p.id,
+                            name: p.name,
+                            brand: p.brand,
+                            category: p.category,
+                            retail_price: Number(p.retail_price),
+                            is_active: p.is_active,
+                          }}
+                          categories={taxonomy.categories.map((c) => ({
+                            slug: c.slug,
+                            label: c.label,
+                          }))}
+                        />
+                      </div>
                     </td>
                     <td className="px-4 py-2">{p.brand ?? "—"}</td>
                     <td className="px-4 py-2">
@@ -219,12 +241,12 @@ export default async function ProductsPage({
                         </Link>
                       ) : (
                         (p.product_variants ?? [])
-                          .map(
-                            (v) =>
-                              `${v.sku} (${v.size_ml}${sizeUnit}) · ${
-                                availByVariant.get(v.id) ?? 0
-                              } left`
-                          )
+                          .map((v) => {
+                            const size =
+                              v.size_ml ?? (v.attributes as Record<string, unknown> | null)?.size ?? null;
+                            const sizePart = size != null ? ` (${size}${sizeUnit})` : "";
+                            return `${v.sku}${sizePart} · ${availByVariant.get(v.id) ?? 0} left`;
+                          })
                           .join(", ")
                       )}
                     </td>
