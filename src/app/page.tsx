@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { requireUser } from "@/lib/auth";
 import { getSettings, formatMoney } from "@/lib/settings";
+import { getAccessibleStores, getActiveStore } from "@/lib/store-scope";
 import FadeIn from "@/components/fade-in";
 import Ticker from "@/components/ticker";
 
@@ -31,6 +32,11 @@ export default async function Dashboard() {
 
   const since30d = new Date(Date.now() - 30 * 24 * 3600 * 1000).toISOString();
 
+  // Respect the globally selected store (cookie): when one store is active,
+  // the dashboard aggregates only that store so contents never mix.
+  const accessible = await getAccessibleStores(session, supabase);
+  const activeStoreId = await getActiveStore(accessible);
+
   // All independent queries run in ONE parallel round-trip batch.
   // The RPC aggregates every RLS-visible store in a single DB call.
   const [summaryRes, invRes, salesRes, capitalRes, salesCountRes] = await Promise.all([
@@ -40,20 +46,28 @@ export default async function Dashboard() {
     supabase.from("inventory_levels").select(
       "quantity_on_hand, store_id, product_variants(sku, low_stock_threshold, products(name))"
     ),
-    supabase
-      .from("sales_transactions")
-      .select("id, total, created_at, stores(name)")
-      .order("created_at", { ascending: false })
-      .limit(8),
+    (() => {
+      let q = supabase
+        .from("sales_transactions")
+        .select("id, total, created_at, stores(name)")
+        .order("created_at", { ascending: false })
+        .limit(8);
+      if (activeStoreId) q = q.eq("store_id", activeStoreId);
+      return q;
+    })(),
     isPrivileged
       ? supabase.from("capital_ledger").select("amount")
       : Promise.resolve({ data: null } as { data: { amount: number }[] | null }),
     canSeeRevenue
       ? Promise.resolve({ count: null as number | null })
-      : supabase
-          .from("sales_transactions")
-          .select("id", { count: "exact", head: true })
-          .gte("created_at", since30d),
+      : (() => {
+          let q = supabase
+            .from("sales_transactions")
+            .select("id", { count: "exact", head: true })
+            .gte("created_at", since30d);
+          if (activeStoreId) q = q.eq("store_id", activeStoreId);
+          return q;
+        })(),
   ]);
 
   type AllRow = {
@@ -72,6 +86,7 @@ export default async function Dashboard() {
   >();
   const byDay = new Map<string, number>();
   for (const r of allRows) {
+    if (activeStoreId && r.store_id !== activeStoreId) continue;
     const st =
       storeMap.get(r.store_id) ??
       { id: r.store_id, name: r.store_name, revenue: 0, profit: 0 };
@@ -99,6 +114,7 @@ export default async function Dashboard() {
     .filter(
       (r) =>
         r.product_variants &&
+        (!activeStoreId || r.store_id === activeStoreId) &&
         r.quantity_on_hand <= r.product_variants.low_stock_threshold
     )
     .slice(0, 8);

@@ -4,6 +4,7 @@ import { requireUser, requirePrivileged } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { getSettings, formatMoney } from "@/lib/settings";
 import { getTaxonomy } from "@/lib/services/taxonomy";
+import { getAccessibleStores, getActiveStore } from "@/lib/store-scope";
 import { parseVariantAttributes } from "@/lib/attributes";
 import AddProductForm from "./add-product-form";
 
@@ -94,16 +95,23 @@ export default async function ProductsPage() {
       )
       .order("name"),
     // RLS-scoped: admins see all stores, managers only their own.
-    supabase.from("inventory_levels").select("variant_id, quantity_on_hand"),
+    supabase.from("inventory_levels").select("variant_id, store_id, quantity_on_hand"),
   ]);
   const money = (n: number) => formatMoney(n, currencySymbol, currencyLocale);
+
+  // Respect the globally selected store (cookie): when a single store is
+  // active, availability reflects only that store so contents never mix.
+  const accessible = await getAccessibleStores(session, supabase);
+  const activeStoreId = await getActiveStore(accessible);
 
   // Sum total units on hand per variant (across the caller's visible stores).
   const availByVariant = new Map<string, number>();
   for (const row of (inventory ?? []) as {
     variant_id: string;
+    store_id: string;
     quantity_on_hand: number;
   }[]) {
+    if (activeStoreId && row.store_id !== activeStoreId) continue;
     availByVariant.set(
       row.variant_id,
       (availByVariant.get(row.variant_id) ?? 0) + Number(row.quantity_on_hand)

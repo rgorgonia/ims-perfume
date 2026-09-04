@@ -26,6 +26,7 @@ export default function SaleForm({
   availability,
   sizeUnit,
   currencySymbol,
+  defaultStoreId,
 }: {
   action: (prev: SaleResult, formData: FormData) => Promise<SaleResult>;
   stores: StoreT[];
@@ -33,9 +34,10 @@ export default function SaleForm({
   availability: Record<string, Record<string, number>>;
   sizeUnit: string;
   currencySymbol: string;
+  defaultStoreId?: string;
 }) {
   const [res, submit, pending] = useActionState(action, {} as SaleResult);
-  const [storeId, setStoreId] = useState(stores[0]?.id ?? "");
+  const [storeId, setStoreId] = useState(defaultStoreId || stores[0]?.id || "");
   const [variantId, setVariantId] = useState("");
   const [qty, setQty] = useState(1);
 

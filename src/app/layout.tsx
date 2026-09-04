@@ -4,6 +4,7 @@ import "./globals.css";
 import { getSession } from "@/lib/auth";
 import { getSettings } from "@/lib/settings";
 import { createClient } from "@/lib/supabase/server";
+import { getAccessibleStores, getActiveStore } from "@/lib/store-scope";
 import AppShell from "@/components/app-shell";
 
 const geistSans = Geist({
@@ -69,6 +70,14 @@ export default async function RootLayout({
 
   const settings = await getSettings(session?.tenant_id ?? null);
 
+  // Global store switcher: the stores this user can operate on + the active pick.
+  let stores: { id: string; name: string }[] = [];
+  let activeStoreId: string | null = null;
+  if (session) {
+    stores = await getAccessibleStores(session, supabase);
+    activeStoreId = await getActiveStore(stores);
+  }
+
   const roleLabel =
     session?.profile?.role === "platform_admin"
       ? "Platform Admin"
@@ -94,6 +103,8 @@ export default async function RootLayout({
             storeName={storeName}
             businessName={settings.businessName}
             avatarUrl={session.profile?.avatar_url ?? null}
+            stores={stores}
+            activeStoreId={activeStoreId}
           >
             {children}
           </AppShell>

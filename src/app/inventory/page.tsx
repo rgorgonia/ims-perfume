@@ -1,6 +1,7 @@
 import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
+import { getAccessibleStores, getActiveStore } from "@/lib/store-scope";
 import { getSettings } from "@/lib/settings";
 
 type Store = { id: string; name: string };
@@ -110,6 +111,10 @@ export default async function InventoryPage() {
     storesQuery.eq("tenant_id", session.tenant_id);
   }
   const storeIds = new Set<string>();
+  // Respect the globally selected store (cookie). When a single store is
+  // active, only its inventory is shown so store contents never mix.
+  const accessible = await getAccessibleStores(session, supabase);
+  const activeStoreId = await getActiveStore(accessible);
 
   const [{ data: stores }, { data: variants }, { data: levels }] =
     await Promise.all([
@@ -132,6 +137,8 @@ export default async function InventoryPage() {
   for (const l of (levels ?? []) as unknown as Level[]) {
     // Skip stock held at stores this user cannot operate on.
     if (!storeIds.has(l.store_id)) continue;
+    // Skip stock for the store that isn't selected (when one store is active).
+    if (activeStoreId && l.store_id !== activeStoreId) continue;
     const key = `${l.variant_id}:${l.store_id}`;
     const cur = totals.get(key);
     if (cur) cur.qty += l.quantity_on_hand;

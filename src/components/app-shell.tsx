@@ -20,6 +20,7 @@ import {
   ScrollText,
 } from "lucide-react";
 import { signOutAction } from "@/app/actions";
+import StoreSwitcher from "@/components/store-switcher";
 
 type Item = {
   href: string;
@@ -59,6 +60,8 @@ export default function AppShell({
   storeName,
   businessName,
   avatarUrl,
+  stores,
+  activeStoreId,
   children,
 }: {
   email: string;
@@ -69,6 +72,8 @@ export default function AppShell({
   storeName: string | null;
   businessName: string;
   avatarUrl: string | null;
+  stores: { id: string; name: string }[];
+  activeStoreId: string | null;
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
@@ -137,6 +142,11 @@ export default function AppShell({
             {roleLabel}
           </span>
         </div>
+        {stores.length > 0 && (
+          <div className="shrink-0 pb-1 pt-0.5">
+            <StoreSwitcher stores={stores} activeStoreId={activeStoreId} />
+          </div>
+        )}
         <div className="shrink-0 px-2">
           <input
             type="search"
@@ -238,6 +248,11 @@ export default function AppShell({
           </button>
         </form>
       </header>
+      {stores.length > 0 && (
+        <div className="sticky top-[4.25rem] z-30 border-b border-black/[0.08] bg-white/70 px-4 py-2 backdrop-blur-md md:hidden dark:border-white/10 dark:bg-[#1c1c1e]/70">
+          <StoreSwitcher stores={stores} activeStoreId={activeStoreId} />
+        </div>
+      )}
 
       {/* Content */}
       <div className="min-w-0 pb-24 md:pb-0 md:pl-[18rem]">

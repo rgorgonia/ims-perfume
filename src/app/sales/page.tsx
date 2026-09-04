@@ -2,6 +2,7 @@ import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { getSettings } from "@/lib/settings";
+import { getAccessibleStores, getActiveStore } from "@/lib/store-scope";
 import SaleForm from "./sale-form";
 
 type Store = { id: string; name: string; categories: string[] | null };
@@ -84,6 +85,11 @@ export default async function SalesPage() {
   const { currencySymbol, sizeUnit } = await getSettings(session.tenant_id);
   const supabase = await createClient();
 
+  // Respect the globally selected store (cookie): when one store is active,
+  // only its sales/stock are shown so store contents never mix.
+  const accessible = await getAccessibleStores(session, supabase);
+  const activeStoreId = await getActiveStore(accessible);
+
   const [
     { data: stores },
     { data: variants },
@@ -99,11 +105,15 @@ export default async function SalesPage() {
       .select("id, sku, size_ml, retail_price, products(name, category)")
       .order("sku")
       .limit(200),
-    supabase
-      .from("sales_transactions")
-      .select("id, total, payment_method, created_at, stores(name)", { count: "exact" })
-      .order("created_at", { ascending: false })
-      .range(0, 49),
+    (() => {
+      let q = supabase
+        .from("sales_transactions")
+        .select("id, total, payment_method, created_at, stores(name)", { count: "exact" })
+        .order("created_at", { ascending: false })
+        .range(0, 49);
+      if (activeStoreId) q = q.eq("store_id", activeStoreId);
+      return q;
+    })(),
     supabase
       .from("inventory_levels")
       .select("variant_id, store_id, quantity_on_hand"),
@@ -116,6 +126,7 @@ export default async function SalesPage() {
     store_id: string;
     quantity_on_hand: number;
   }[]) {
+    if (activeStoreId && row.store_id !== activeStoreId) continue;
     availability[row.variant_id] ??= {};
     availability[row.variant_id][row.store_id] =
       (availability[row.variant_id][row.store_id] ?? 0) +
@@ -137,6 +148,7 @@ export default async function SalesPage() {
           availability={availability}
           sizeUnit={sizeUnit}
           currencySymbol={currencySymbol}
+          defaultStoreId={activeStoreId ?? undefined}
         />
       </section>
 
